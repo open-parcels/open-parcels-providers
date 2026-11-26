@@ -1,11 +1,9 @@
 import { z } from "zod";
 import {
   defineAction,
-  mapStatus,
   UnexpectedResponseError,
   type ActionContext,
   type ActionResult,
-  type OrderSnapshot,
   type ParcelSnapshot,
   type ProviderAction,
   type Rules,
@@ -21,15 +19,11 @@ import {
   type PageReader,
 } from "./account.js";
 import type { AmazonSecret } from "./auth.js";
-import { AMAZON_ID, buildSnapshot, isSkipped, readsAsStatus } from "./build.js";
-import { daysSince, localIso, placedDay } from "./dates.js";
-import {
-  nextStartIndex,
-  parseOrderTiles,
-  parseOrderYears,
-  shipmentKey,
-  type OrderTile,
-} from "./pages.js";
+import { buildSnapshot, readsAsStatus } from "./build.js";
+import { daysSince, placedDay } from "./dates.js";
+import { parseOrderList } from "./order-cards.js";
+import { orderReports } from "./orders.js";
+import { nextStartIndex, parseOrderYears, shipmentKey, type OrderTile } from "./pages.js";
 import { loadSession, serializeSession, type AmazonSession } from "./session.js";
 import { STOREFRONTS, type Storefront } from "./storefronts.js";
 
@@ -153,39 +147,6 @@ function yearPath(year: number, startIndex: number): string {
   return `${ORDERS_PATH}?${query.toString()}`;
 }
 
-/** The order's status as its lines say: delivered when every line still a parcel says so. */
-function orderStatus(rules: Rules, tiles: readonly OrderTile[]): OrderSnapshot["status"] {
-  const parcels = tiles.filter((tile) => !isSkipped(rules, tile.statusText));
-  if (parcels.length === 0) return null;
-  const delivered = parcels.every(
-    (tile) => mapStatus(rules, AMAZON_ID, { text: tile.statusText })?.status === "delivered",
-  );
-  return delivered ? "delivered" : null;
-}
-
-/** One order report per order on the page, from its lines alone. */
-function orderReports(
-  rules: Rules,
-  storefront: Storefront,
-  tiles: readonly OrderTile[],
-): OrderSnapshot[] {
-  const byOrder = new Map<string, OrderTile[]>();
-  for (const tile of tiles) {
-    byOrder.set(tile.orderId, [...(byOrder.get(tile.orderId) ?? []), tile]);
-  }
-  return [...byOrder.entries()].map(([orderNumber, lines]) => {
-    const day = placedDay(lines[0]?.placedText ?? null);
-    return {
-      order: { shop: AMAZON_ID, orderNumber },
-      status: orderStatus(rules, lines),
-      at: day === null ? null : localIso(day, 0, 0, storefront.timeZone),
-      items: lines.map((line) => line.title).filter((title) => title !== ""),
-      total: null,
-      payment: false,
-    };
-  });
-}
-
 /** Whether a shipment is worth its tracking page: placed recently, not delivered long ago. */
 function worthFollowing(rules: Rules, storefront: Storefront, lead: OrderTile, now: Date): boolean {
   const placed = placedDay(lead.placedText);
@@ -270,20 +231,21 @@ class HistoryImport {
   async readPage(state: Checkpoint): Promise<Checkpoint> {
     const year = state.years[state.year];
     if (year === undefined) return state;
-    const { tiles, next } = await this.#paced.ordersPage(
+    const { list, next } = await this.#paced.ordersPage(
       yearPath(year, state.startIndex),
       (page) => {
         if (page === null) {
           throw new UnexpectedResponseError("Amazon's orders page for a year was not found.");
         }
-        const lines = parseOrderTiles(page.body, (text) => readsAsStatus(this.rules, text));
+        const read = parseOrderList(page.body, (text) => readsAsStatus(this.rules, text));
         return {
-          tiles: lines,
-          next: lines.length === 0 ? null : nextStartIndex(page.body, state.startIndex),
+          list: read,
+          next: read.orders.length === 0 ? null : nextStartIndex(page.body, state.startIndex),
         };
       },
     );
-    if (tiles.length === 0 && state.startIndex === 0) {
+    const tiles = list.tiles;
+    if (list.orders.length === 0 && state.startIndex === 0) {
       // A year the filter offers without physical orders (digital ones are listed elsewhere).
       this.context.reportUnknown("page", "history_year_without_lines");
     }
@@ -292,7 +254,7 @@ class HistoryImport {
       const lead = group[0];
       return lead !== undefined && worthFollowing(this.rules, this.#storefront, lead, now);
     });
-    const orders = orderReports(this.rules, this.#storefront, tiles);
+    const orders = orderReports(this.rules, this.#storefront, list);
     await this.context.emit({ orders });
     const known = new Set(state.pending.map(keyOf));
     return {

@@ -9,7 +9,7 @@ import {
   type ParcelSnapshot,
   type SnapshotEvent,
 } from "../../provider/api.js";
-import { arrivalWindow, parseClock, pastDay, localIso, type Day } from "./dates.js";
+import { arrivalWindow, parseClock, pastDay, placedDay, localIso, type Day } from "./dates.js";
 import { shipmentKey, type OrderTile, type TrackPage } from "./pages.js";
 import type { Storefront } from "./storefronts.js";
 import { maskDigits } from "./text.js";
@@ -141,6 +141,12 @@ function deliveredAt(
   return day === null ? null : localIso(day, 0, 0, timeZone);
 }
 
+/** The day the order line says the order was placed, at midnight in the storefront's zone. */
+function placedAt(input: BuildInput, lead: OrderTile): string | null {
+  const day = placedDay(lead.placedText);
+  return day === null ? null : localIso(day, 0, 0, input.storefront.timeZone);
+}
+
 function pageUrl(storefront: Storefront, path: string): string {
   return new URL(path, `https://www.${storefront.domain}/`).toString();
 }
@@ -186,7 +192,7 @@ export function buildSnapshot(input: BuildInput): ParcelSnapshot | null {
       price: null,
       currency: null,
     })),
-    order: { shop: AMAZON_ID, orderNumber: lead.orderId, placedAt: null },
+    order: { shop: AMAZON_ID, orderNumber: lead.orderId, placedAt: placedAt(input, lead) },
     externalRef: `${lead.orderId}/${key}`,
     handoff,
     raw: {

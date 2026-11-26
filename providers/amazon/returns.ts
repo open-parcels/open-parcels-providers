@@ -20,7 +20,7 @@ const RETURN_EVENTS: Readonly<Record<string, ReturnStatus>> = {
 };
 
 /** "Return window closed on …": a day in the past; "Eligible through …": one ahead. */
-const CLOSED_RE = /\b(?:closed|endete|abgelaufen|expired)\b/i;
+const CLOSED_RE = /\b(?:closed|endete|geschlossen|abgelaufen|expired)\b/i;
 
 function isoDay(day: Day): string {
   return `${String(day.year)}-${String(day.month).padStart(2, "0")}-${String(day.day).padStart(2, "0")}`;

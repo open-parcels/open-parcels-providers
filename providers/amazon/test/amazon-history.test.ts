@@ -210,9 +210,10 @@ describe("Amazon import history", () => {
     ]);
     const orders = job.batches.flatMap((batch) => batch.orders ?? []);
     expect(orders.map((order) => [order.status, order.at, order.items])).toEqual([
-      [null, "2026-11-11T23:00:00.000Z", ["Example mug"]],
+      // On its way, and cancelled: the orders page says so, so old orders end up where they are.
+      ["shipped", "2026-11-11T23:00:00.000Z", ["Example mug"]],
       ["delivered", "2026-02-28T23:00:00.000Z", ["Example scarf"]],
-      [null, "2026-02-01T23:00:00.000Z", ["Example board game"]],
+      ["cancelled", "2026-02-01T23:00:00.000Z", ["Example board game"]],
       ["delivered", "2024-05-04T22:00:00.000Z", ["Example umbrella"]],
     ]);
     const parcels = job.batches.flatMap((batch) => batch.snapshots ?? []);

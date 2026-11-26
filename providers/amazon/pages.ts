@@ -70,14 +70,14 @@ const TILE_IMAGE_RE = /class="product-image[^"]*">\s*(<img\b[^>]*>)/;
 const IMAGE_SRC_RE = /\b(data-a-hires|src)="(https:\/\/[^"]+)"/g;
 /** The return window an order line names, read from its stretch of page as text. */
 const RETURN_WINDOW_RE =
-  /\b(?:Return window (?:closed|closes|ends) on|Eligible (?:for return )?(?:through|until)|Rückgabe(?:zeitraum)? (?:endete am|endet am|möglich bis|bis zum|bis)|Rücksendung möglich bis)\s+[^<>|]{3,30}/i;
+  /\b(?:Return window (?:closed|closes|ends) on|Eligible (?:for return )?(?:through|until)|Rückgabe(?:zeitraum|fenster|-Zeitfenster)? (?:endete am|endet am|geschlossen am|möglich bis|bis zum|bis)|(?:Rücksendung )?möglich bis)\s+[^<>|]{3,30}/i;
 /** Characters after the last line searched for its image; a real line is about half this. */
 const TILE_SPAN = 4000;
 /** The placed date may carry a comma before its year, as US-style dates do ("November 10, 2026"). */
 const PLACED_RE =
   /,\s*(?:Order placed|Bestellt am|Bestellung aufgegeben(?: am)?)\s+([^,]+(?:,\s*\d{4})?)(?:,\s*(.*))?$/s;
-const ORDER_ID_RE = /\d{3}-\d{7}-\d{7}/;
-const TRACK_LINK_RE = /href="([^"]*\/(?:ship-track|progress-tracker\/package\/?)\?[^"]*)"/;
+export const ORDER_ID_RE = /\d{3}-\d{7}-\d{7}/;
+export const TRACK_LINK_RE = /href="([^"]*\/(?:ship-track|progress-tracker\/package\/?)\?[^"]*)"/;
 const TRACK_PAGE_PATH_RE =
   /\/(?:progress-tracker\/package|gp\/your-account\/ship-track)(?:\/ref=[^/]*)?\/?$/;
 const CARRIER_RE =
@@ -98,7 +98,7 @@ const MAP_RE = /map-tracking|package-location/;
 /** The page names the courier plainly, not by its code. */
 const CARRIER_ALIASES: Readonly<Record<string, string>> = { DHL: "DHL_CONNECT" };
 
-function queryOf(path: string): Map<string, string> {
+export function queryOf(path: string): Map<string, string> {
   const query = new Map<string, string>();
   try {
     for (const [key, value] of new URL(path, "https://www.example.invalid/").searchParams) {
@@ -143,7 +143,7 @@ function splitLabel(
 }
 
 /** The product thumbnail in one order line's stretch of page, the larger one if offered. */
-function tileImage(fragment: string): string | null {
+export function tileImage(fragment: string): string | null {
   const tag = TILE_IMAGE_RE.exec(fragment)?.[1];
   if (tag === undefined) {
     return null;
@@ -156,7 +156,7 @@ function tileImage(fragment: string): string | null {
   return url === undefined || url === "" ? null : unescapeHtml(url);
 }
 
-function returnWindow(fragment: string): string | null {
+export function returnWindow(fragment: string): string | null {
   const text = cleanText(unescapeHtml(fragment.replace(/<[^>]*>/g, " ")));
   return RETURN_WINDOW_RE.exec(text)?.[0] ?? null;
 }

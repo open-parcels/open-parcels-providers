@@ -13,12 +13,14 @@ import { mintCookies, type AmazonSecret } from "./auth.js";
 import { AMAZON_ID, buildSnapshot, isSkipped, readsAsStatus } from "./build.js";
 import { pastDay, today, type Day } from "./dates.js";
 import { returnUntil, tileReturns } from "./returns.js";
+import { parseOrderList, type OrderHeader, type OrderList } from "./order-cards.js";
+import { orderReports } from "./orders.js";
 import {
   hasMoreOrderPages,
   isTrackPagePath,
   looksLikeCaptcha,
   looksSignedOut,
-  parseOrderTiles,
+  nextStartIndex,
   parseTrackLink,
   parseTrackPage,
   shipmentKey,
@@ -47,6 +49,8 @@ export type AmazonContext = ProviderContext<AmazonConfig, AmazonSecret | null>;
 
 /** The orders page, then the older order-history path some accounts are still sent to. */
 const ORDERS_PATHS = ["/your-orders/orders", "/gp/css/order-history"] as const;
+/** Orders pages a polling run reads: the newest orders; older ones are "Import history"'s. */
+const ORDER_PAGES = 2;
 /** Every shipment costs up to two page loads; a run never loads more than this many shipments. */
 export const MAX_SHIPMENT_LOADS = 8;
 /** Delivered shipments older than this are listed from the order line alone, never loaded. */
@@ -152,17 +156,34 @@ export class StorefrontReader implements PageReader {
   }
 }
 
-async function readTiles(
+/**
+ * The first orders pages: the newest orders, the ones still moving among them. Null when the
+ * orders page does not exist. `more` says older pages follow that this run did not read.
+ */
+async function readListing(
   rules: Rules,
   reader: StorefrontReader,
-): Promise<{ tiles: OrderTile[]; more: boolean } | null> {
+): Promise<{ list: OrderList; more: boolean } | null> {
+  const isStatus = (text: string): boolean => readsAsStatus(rules, text);
   for (const path of ORDERS_PATHS) {
-    const page = await reader.page(path);
-    if (page !== null) {
-      return {
-        tiles: parseOrderTiles(page.body, (text) => readsAsStatus(rules, text)),
-        more: hasMoreOrderPages(page.body),
-      };
+    let page = await reader.page(path);
+    if (page === null) continue;
+    const tiles: OrderTile[] = [];
+    const orders: OrderHeader[] = [];
+    let start = 0;
+    for (let read = 1; ; read += 1) {
+      const list = parseOrderList(page.body, isStatus);
+      tiles.push(
+        ...list.tiles.map((tile) => ({ ...tile, position: tiles.length + tile.position })),
+      );
+      orders.push(...list.orders);
+      const next = list.orders.length === 0 ? null : nextStartIndex(page.body, start);
+      if (next === null) return { list: { tiles, orders }, more: hasMoreOrderPages(page.body) };
+      if (read >= ORDER_PAGES) return { list: { tiles, orders }, more: true };
+      start = next;
+      const following = await reader.page(`${path}?startIndex=${String(next)}`);
+      if (following === null) return { list: { tiles, orders }, more: true };
+      page = following;
     }
   }
   return null;
@@ -260,12 +281,12 @@ async function collect(
   session: AmazonSession,
   reader: StorefrontReader,
 ): Promise<FetchResult> {
-  const listing = await readTiles(rules, reader);
+  const listing = await readListing(rules, reader);
   if (listing === null) {
     throw new UnexpectedResponseError("Amazon's orders page was not found.");
   }
-  const tiles = listing.tiles;
-  if (tiles.length === 0) {
+  const tiles = listing.list.tiles;
+  if (listing.list.orders.length === 0) {
     // Legitimate for an account without recent orders, but a changed page looks the same; an
     // incomplete result keeps every known parcel instead of concluding they are gone.
     context.reportUnknown("page", "orders_without_lines");
@@ -279,8 +300,8 @@ async function collect(
   const isOld = (lead: OrderTile): boolean => deliveredLongAgo(rules, lead, now, storefront);
   const loads = pickLoads(groups, session, isOld);
   const snapshots: ParcelSnapshot[] = [];
-  // Only the first orders page is read: with older pages behind it, a parcel that is not listed
-  // may still be on its way, so the result must not say "everything".
+  // Only the first orders pages are read: with older pages behind them, a parcel that is not
+  // listed may still be on its way, so the result must not say "everything".
   let complete = !listing.more;
   for (const [key, group] of groups) {
     const lead = group[0];
@@ -328,5 +349,10 @@ async function collect(
       };
     }
   }
-  return { snapshots, returns: tileReturns(rules, tiles), complete };
+  return {
+    snapshots,
+    returns: tileReturns(rules, tiles),
+    orders: orderReports(rules, storefront, listing.list),
+    complete,
+  };
 }
