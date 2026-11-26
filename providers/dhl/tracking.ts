@@ -14,7 +14,10 @@ export interface Regional {
   readonly iberia: boolean;
   /** DHL Freight Sweden: one request for every ten-character code. */
   readonly sweden: boolean;
-  /** Mój DHL (Poland): one batch for every code, behind a proof-of-work challenge. */
+  /**
+   * Mój DHL (Poland): one batch for every code, behind a proof-of-work challenge; skipped when the
+   * connection has a key for DHL's official API, which covers Polish parcels itself.
+   */
   readonly poland: boolean;
 }
 
@@ -41,7 +44,12 @@ export async function trackCodes(
   const keys = codes.map((c) => c.key);
   const gateway = await fetchGateway(deps, keys);
   const sweden = regional.sweden ? await fetchSweden(deps, keys) : new Map<string, Json>();
-  const poland = regional.poland ? await lookUpPublic(deps.http, keys) : new Map<string, Json>();
+  // With the user's key the official API answers Polish parcels too (service `parcel-pl`), so
+  // Mój DHL's public lookup and its proof of work are skipped (OP-108, option D).
+  const poland =
+    regional.poland && apiKey === null
+      ? await lookUpPublic(deps.http, keys)
+      : new Map<string, Json>();
   const reportPl = (key: string): void => {
     deps.reportUnknown("status_code", key);
   };

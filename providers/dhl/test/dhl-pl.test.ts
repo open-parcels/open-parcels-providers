@@ -152,3 +152,37 @@ describe("DHL Poland's public lookup (OP-097)", () => {
     );
   });
 });
+
+describe("DHL Poland with a key for DHL's official API (OP-108, option D)", () => {
+  it("asks the official API instead of Mój DHL and computes no proof of work", async () => {
+    // Shaped after the Shipment Tracking - Unified documentation's example; values made up.
+    const shipment = {
+      id: CODE,
+      service: "parcel-pl",
+      origin: { address: { countryCode: "PL" } },
+      destination: { address: { countryCode: "PL" } },
+      status: {
+        timestamp: "2026-11-18T08:15:00Z",
+        statusCode: "transit",
+        status: "SHIPMENT IN TRANSIT",
+        description: "The shipment is in transit.",
+      },
+      events: [
+        {
+          timestamp: "2026-11-18T08:15:00Z",
+          statusCode: "transit",
+          status: "SHIPMENT IN TRANSIT",
+          description: "The shipment is in transit.",
+        },
+      ],
+    };
+    const world = new World(dhl, [
+      (call) =>
+        call.url.hostname === "api-eu.dhl.com" ? json({ shipments: [shipment] }) : undefined,
+      () => json([]),
+    ]);
+    const result = await world.track([CODE], { regions: ["PL"] }, { apiKey: "made-up-key" });
+    expect(world.calls.some((call) => call.url.hostname === "mojdhl.pl")).toBe(false);
+    expect(result.snapshots[0]).toMatchObject({ trackingNumber: CODE, status: "in_transit" });
+  });
+});

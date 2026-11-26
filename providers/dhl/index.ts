@@ -48,7 +48,15 @@ const configSchema = z.looseObject({
   regions: z
     .array(z.enum(["ES", "PT", "SE", "PL"]))
     .optional()
-    .meta({ title: "Regions" }),
+    .meta({
+      title: "Regions",
+      description:
+        "Regional DHL networks to ask as well. PL: Mój DHL's public lookup asks every client to " +
+        "compute a proof of work first (up to 2,000,000 SHA-256 hashes, at most 4 seconds of CPU " +
+        "per lookup), which open-parcels does; it never answers a challenge meant for a person. " +
+        "With a DHL API key (optional sign-in) Polish parcels come from DHL's official API " +
+        "instead, without the proof of work.",
+    }),
   /** Which DHL account an account connection reads: dhl.de (default), my.dhlecommerce.nl or mojdhl.pl. */
   account: z.enum(["de", "nl", "pl"]).optional().meta({ title: "Account" }),
 });
