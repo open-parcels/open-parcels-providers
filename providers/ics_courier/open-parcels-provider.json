@@ -1,0 +1,23 @@
+{
+  "schema": 1,
+  "id": "ics_courier",
+  "name": "ICS Courier",
+  "countries": ["CA"],
+  "provides": {
+    "connections": ["tracking"],
+    "live": false,
+    "fallback": false
+  },
+  "permissions": {
+    "network": [
+      {
+        "host": ".icscourier.ca",
+        "reason": "Tracking data."
+      }
+    ],
+    "image_hosts": [],
+    "secrets": [],
+    "session": false,
+    "user_agent": false
+  }
+}

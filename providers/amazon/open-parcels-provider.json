@@ -1,0 +1,84 @@
+{
+  "schema": 1,
+  "id": "amazon",
+  "name": "Amazon",
+  "countries": ["DE", "AT", "GB", "US", "IE", "CA", "AU", "IN"],
+  "provides": {
+    "connections": ["shop"],
+    "live": true,
+    "fallback": false
+  },
+  "permissions": {
+    "network": [
+      {
+        "host": ".amazon.ca",
+        "reason": "Account data."
+      },
+      {
+        "host": ".amazon.co.uk",
+        "reason": "Account data."
+      },
+      {
+        "host": ".amazon.com",
+        "reason": "Account data."
+      },
+      {
+        "host": ".amazon.com.au",
+        "reason": "Account data."
+      },
+      {
+        "host": ".amazon.de",
+        "reason": "Account data."
+      },
+      {
+        "host": ".amazon.ie",
+        "reason": "Account data."
+      },
+      {
+        "host": ".amazon.in",
+        "reason": "Account data."
+      }
+    ],
+    "image_hosts": ["m.media-amazon.com", ".ssl-images-amazon.com", ".images-amazon.com"],
+    "secrets": ["token"],
+    "session": true,
+    "user_agent": true
+  },
+  "email": {
+    "from_domains": [
+      ".amazon.ca",
+      ".amazon.co.uk",
+      ".amazon.com",
+      ".amazon.com.au",
+      ".amazon.de",
+      ".amazon.es",
+      ".amazon.fr",
+      ".amazon.in",
+      ".amazon.it",
+      ".amazon.nl",
+      ".amazon.pl"
+    ]
+  },
+  "actions": [
+    {
+      "id": "import_history",
+      "kind": "task",
+      "label": "Import history",
+      "description": "Reads every order on the account, back to the first one, and keeps it as history.",
+      "connection_kinds": ["shop"],
+      "when_state": ["ok", "idle"],
+      "weight": "heavy",
+      "confirm": "This reads your whole order history, slowly. It can take hours.",
+      "destructive": false,
+      "expose_to_ha": true,
+      "cooldown_minutes": 1440
+    },
+    {
+      "id": "open_orders",
+      "kind": "link",
+      "label": "Your orders",
+      "connection_kinds": ["shop"],
+      "url": "https://www.{storefront}/your-orders/orders"
+    }
+  ]
+}

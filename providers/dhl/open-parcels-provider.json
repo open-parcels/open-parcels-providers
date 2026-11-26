@@ -1,0 +1,48 @@
+{
+  "schema": 1,
+  "id": "dhl",
+  "name": "DHL",
+  "countries": ["*"],
+  "aliases": ["Deutsche Post"],
+  "logo": "dhl.svg",
+  "provides": {
+    "connections": ["account", "tracking"],
+    "live": false,
+    "fallback": false
+  },
+  "permissions": {
+    "network": [
+      {
+        "host": ".dhl.com",
+        "reason": "Tracking and account data."
+      },
+      {
+        "host": ".dhl.de",
+        "reason": "Sign-in and parcel data."
+      },
+      {
+        "host": ".dhl.es",
+        "reason": "Tracking and account data."
+      },
+      {
+        "host": ".dhlecommerce.nl",
+        "reason": "Tracking and account data."
+      },
+      {
+        "host": ".dhlparcel.nl",
+        "reason": "Tracking and account data."
+      },
+      {
+        "host": ".mojdhl.pl",
+        "reason": "Tracking and account data."
+      }
+    ],
+    "image_hosts": [],
+    "secrets": ["api_key", "token"],
+    "session": true,
+    "user_agent": false
+  },
+  "email": {
+    "from_domains": [".dhl.com", ".dhl.de"]
+  }
+}

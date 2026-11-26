@@ -1,0 +1,23 @@
+{
+  "schema": 1,
+  "id": "poste_italiane",
+  "name": "Poste Italiane",
+  "countries": ["IT"],
+  "provides": {
+    "connections": ["tracking"],
+    "live": false,
+    "fallback": false
+  },
+  "permissions": {
+    "network": [
+      {
+        "host": ".poste.it",
+        "reason": "Tracking data."
+      }
+    ],
+    "image_hosts": [],
+    "secrets": [],
+    "session": false,
+    "user_agent": false
+  }
+}

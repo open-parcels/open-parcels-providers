@@ -1,0 +1,28 @@
+{
+  "schema": 1,
+  "id": "usps",
+  "name": "USPS",
+  "countries": ["US"],
+  "aliases": ["United States Postal Service"],
+  "logo": "usps.svg",
+  "provides": {
+    "connections": ["account", "tracking"],
+    "live": false,
+    "fallback": false
+  },
+  "permissions": {
+    "network": [
+      {
+        "host": ".usps.com",
+        "reason": "Tracking and account data."
+      }
+    ],
+    "image_hosts": [],
+    "secrets": ["api_key", "token"],
+    "session": true,
+    "user_agent": false
+  },
+  "email": {
+    "from_domains": [".usps.com"]
+  }
+}

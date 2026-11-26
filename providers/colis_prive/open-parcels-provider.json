@@ -1,0 +1,23 @@
+{
+  "schema": 1,
+  "id": "colis_prive",
+  "name": "Colis Privé",
+  "countries": ["FR", "BE", "NL"],
+  "provides": {
+    "connections": ["tracking"],
+    "live": false,
+    "fallback": false
+  },
+  "permissions": {
+    "network": [
+      {
+        "host": ".colisprive.com",
+        "reason": "Tracking data."
+      }
+    ],
+    "image_hosts": [],
+    "secrets": [],
+    "session": false,
+    "user_agent": false
+  }
+}

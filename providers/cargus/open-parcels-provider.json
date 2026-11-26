@@ -1,0 +1,31 @@
+{
+  "schema": 1,
+  "id": "cargus",
+  "name": "Cargus",
+  "countries": ["RO"],
+  "provides": {
+    "connections": ["account", "tracking"],
+    "live": false,
+    "fallback": false
+  },
+  "permissions": {
+    "network": [
+      {
+        "host": ".cargus.ro",
+        "reason": "Tracking and account data."
+      },
+      {
+        "host": "cmacwabackend.azurewebsites.net",
+        "reason": "Tracking and account data."
+      },
+      {
+        "host": "mycargus.b2clogin.com",
+        "reason": "Sign-in."
+      }
+    ],
+    "image_hosts": [],
+    "secrets": ["credentials"],
+    "session": true,
+    "user_agent": false
+  }
+}

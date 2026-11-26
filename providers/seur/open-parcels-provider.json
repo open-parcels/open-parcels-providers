@@ -1,0 +1,23 @@
+{
+  "schema": 1,
+  "id": "seur",
+  "name": "SEUR",
+  "countries": ["ES"],
+  "provides": {
+    "connections": ["account"],
+    "live": false,
+    "fallback": false
+  },
+  "permissions": {
+    "network": [
+      {
+        "host": ".seur.com",
+        "reason": "Sign-in and parcel data."
+      }
+    ],
+    "image_hosts": [],
+    "secrets": ["credentials"],
+    "session": true,
+    "user_agent": false
+  }
+}

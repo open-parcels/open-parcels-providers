@@ -1,0 +1,23 @@
+{
+  "schema": 1,
+  "id": "matkahuolto",
+  "name": "Matkahuolto",
+  "countries": ["FI"],
+  "provides": {
+    "connections": ["tracking"],
+    "live": false,
+    "fallback": false
+  },
+  "permissions": {
+    "network": [
+      {
+        "host": ".matkahuolto.fi",
+        "reason": "Tracking data."
+      }
+    ],
+    "image_hosts": [],
+    "secrets": [],
+    "session": false,
+    "user_agent": false
+  }
+}

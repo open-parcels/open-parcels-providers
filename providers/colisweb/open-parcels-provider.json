@@ -1,0 +1,23 @@
+{
+  "schema": 1,
+  "id": "colisweb",
+  "name": "Colisweb",
+  "countries": ["FR"],
+  "provides": {
+    "connections": ["tracking"],
+    "live": false,
+    "fallback": false
+  },
+  "permissions": {
+    "network": [
+      {
+        "host": ".colisweb.com",
+        "reason": "Tracking data."
+      }
+    ],
+    "image_hosts": [],
+    "secrets": [],
+    "session": false,
+    "user_agent": false
+  }
+}

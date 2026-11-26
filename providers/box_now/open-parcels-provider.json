@@ -1,0 +1,35 @@
+{
+  "schema": 1,
+  "id": "box_now",
+  "name": "BOX NOW",
+  "countries": ["GR", "BG", "HR", "CY"],
+  "provides": {
+    "connections": ["tracking"],
+    "live": false,
+    "fallback": false
+  },
+  "permissions": {
+    "network": [
+      {
+        "host": ".boxnow.bg",
+        "reason": "Tracking data."
+      },
+      {
+        "host": ".boxnow.cy",
+        "reason": "Tracking data."
+      },
+      {
+        "host": ".boxnow.gr",
+        "reason": "Tracking data."
+      },
+      {
+        "host": ".boxnow.hr",
+        "reason": "Tracking data."
+      }
+    ],
+    "image_hosts": [],
+    "secrets": [],
+    "session": false,
+    "user_agent": false
+  }
+}

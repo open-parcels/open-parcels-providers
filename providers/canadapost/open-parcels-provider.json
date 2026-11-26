@@ -1,0 +1,30 @@
+{
+  "schema": 1,
+  "id": "canadapost",
+  "name": "Canada Post",
+  "countries": ["CA"],
+  "provides": {
+    "connections": ["account", "tracking"],
+    "live": false,
+    "fallback": false
+  },
+  "permissions": {
+    "network": [
+      {
+        "host": ".canadapost-postescanada.ca",
+        "reason": "Sign-in and parcel data."
+      },
+      {
+        "host": "b3n4knmt6famlj575e5pfn74lm.appsync-api.ca-central-1.amazonaws.com",
+        "reason": "Tracking and account data."
+      }
+    ],
+    "image_hosts": [],
+    "secrets": ["credentials"],
+    "session": true,
+    "user_agent": false
+  },
+  "email": {
+    "from_domains": [".canadapost.postescanada.ca"]
+  }
+}

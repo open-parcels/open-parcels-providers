@@ -1,0 +1,44 @@
+{
+  "schema": 1,
+  "id": "shopee_xpress",
+  "name": "Shopee Xpress",
+  "countries": ["BR", "ID", "MY", "PH", "TH", "VN"],
+  "logo": "shopee_xpress.svg",
+  "provides": {
+    "connections": ["tracking"],
+    "live": false,
+    "fallback": false
+  },
+  "permissions": {
+    "network": [
+      {
+        "host": ".spx.co.id",
+        "reason": "Tracking data."
+      },
+      {
+        "host": ".spx.co.th",
+        "reason": "Tracking data."
+      },
+      {
+        "host": ".spx.com.br",
+        "reason": "Tracking data."
+      },
+      {
+        "host": ".spx.com.my",
+        "reason": "Tracking data."
+      },
+      {
+        "host": ".spx.ph",
+        "reason": "Tracking data."
+      },
+      {
+        "host": ".spx.vn",
+        "reason": "Tracking data."
+      }
+    ],
+    "image_hosts": [],
+    "secrets": [],
+    "session": false,
+    "user_agent": false
+  }
+}

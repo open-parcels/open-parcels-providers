@@ -1,0 +1,31 @@
+{
+  "schema": 1,
+  "id": "sameday",
+  "name": "Sameday",
+  "countries": ["RO", "HU", "BG"],
+  "provides": {
+    "connections": ["tracking"],
+    "live": false,
+    "fallback": false
+  },
+  "permissions": {
+    "network": [
+      {
+        "host": ".sameday.bg",
+        "reason": "Tracking data."
+      },
+      {
+        "host": ".sameday.hu",
+        "reason": "Tracking data."
+      },
+      {
+        "host": ".sameday.ro",
+        "reason": "Tracking data."
+      }
+    ],
+    "image_hosts": [],
+    "secrets": [],
+    "session": false,
+    "user_agent": false
+  }
+}

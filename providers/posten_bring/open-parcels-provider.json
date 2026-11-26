@@ -1,0 +1,28 @@
+{
+  "schema": 1,
+  "id": "posten_bring",
+  "name": "Posten / Bring",
+  "countries": ["NO"],
+  "aliases": ["Norway Post"],
+  "provides": {
+    "connections": ["account"],
+    "live": false,
+    "fallback": false
+  },
+  "permissions": {
+    "network": [
+      {
+        "host": ".bring.com",
+        "reason": "Sign-in."
+      },
+      {
+        "host": ".posten.no",
+        "reason": "Sign-in and parcel data."
+      }
+    ],
+    "image_hosts": [],
+    "secrets": ["token"],
+    "session": true,
+    "user_agent": false
+  }
+}

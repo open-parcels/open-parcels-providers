@@ -1,0 +1,23 @@
+{
+  "schema": 1,
+  "id": "pdn_express",
+  "name": "PDN Express",
+  "countries": ["*"],
+  "provides": {
+    "connections": ["tracking"],
+    "live": false,
+    "fallback": false
+  },
+  "permissions": {
+    "network": [
+      {
+        "host": ".pdn.express",
+        "reason": "Tracking data."
+      }
+    ],
+    "image_hosts": [],
+    "secrets": [],
+    "session": false,
+    "user_agent": false
+  }
+}

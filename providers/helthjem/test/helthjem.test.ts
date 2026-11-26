@@ -1,0 +1,94 @@
+import { describe, expect, it } from "vitest";
+import { helthjem } from "../../../src/carriers/helthjem/index.js";
+import { registerBuiltin } from "../../manifests.js";
+import { TransientError, UnexpectedResponseError } from "../../../src/provider/errors.js";
+import { fakeContext, fakeNetwork, inOrder, json, raw, type Answer } from "../harness.js";
+
+/** Replies in order; once they run out, 500 with an empty body. */
+const scripted = (replies: Answer[]) => fakeNetwork([inOrder(...replies)], () => raw("", 500));
+
+// Made-up codes and values only.
+const CODE = "TEST00000001";
+const plugin = registerBuiltin(helthjem);
+
+function parcel(status: string, extra: Record<string, unknown> = {}): Answer {
+  return json(
+    {
+      data: {
+        getParcelTrackingDetails: {
+          trackingNumber: CODE,
+          status,
+          estimatedDelivery: { date: "2026-04-10" },
+          servicePoint: { name: "Test Point", address: "Test Street 1" },
+          deliveryPoint: { type: "MAILBOX" },
+          events: [
+            { createdAt: "2026-04-08T08:00:00Z", status: "REGISTERED", message: null },
+            {
+              createdAt: "2026-04-09T08:00:00Z",
+              status,
+              location: "Test Terminal",
+              message: { description: "Latest step" },
+            },
+          ],
+          ...extra,
+        },
+      },
+    },
+    200,
+  );
+}
+
+async function run(replies: Answer[]) {
+  const { fetchImpl, calls } = scripted(replies);
+  const { base, unknownKeys: unknown } = fakeContext(helthjem, fetchImpl);
+  const result = await plugin.track(base, {}, null, [CODE]);
+  return { result, calls, unknown };
+}
+
+describe("helthjem", () => {
+  it("reads status, estimate, pickup point and history", async () => {
+    const { result, calls } = await run([parcel("READY_FOR_PICKUP")]);
+    expect(calls[0]?.headers.get("origin")).toBe("https://helthjem.no");
+    expect(JSON.parse(calls[0]?.body ?? "{}")).toMatchObject({ variables: { ref: CODE } });
+    const [snap] = result.snapshots;
+    expect(snap?.status).toBe("at_pickup_point");
+    expect(snap?.pickup).toBe(true);
+    expect(snap?.pickupPoint).toBe("Test Point");
+    // A date-only estimate is that day in Norway: local midnight, not UTC midnight.
+    expect(snap?.expectedFrom).toBe("2026-04-09T22:00:00.000Z");
+    expect(snap?.expectedTo).toBeNull();
+    expect(snap?.history[0]).toEqual({
+      at: "2026-04-09T08:00:00.000Z",
+      rawStatus: "Latest step",
+      status: "at_pickup_point",
+      location: "Test Terminal",
+    });
+    expect(snap?.history[1]?.rawStatus).toBe("REGISTERED");
+  });
+
+  it("takes the delivery time from the delivered event", async () => {
+    const { result } = await run([parcel("DELIVERED")]);
+    expect(result.snapshots[0]?.deliveredAt).toBe("2026-04-09T08:00:00.000Z");
+    expect(result.snapshots[0]?.expectedFrom).toBeNull();
+  });
+
+  it("returns nothing for an unknown reference", async () => {
+    const { result } = await run([json({ data: { getParcelTrackingDetails: null } }, 200)]);
+    expect(result.snapshots).toEqual([]);
+  });
+
+  it("reports an unmapped status once", async () => {
+    const { result, unknown } = await run([parcel("SOMETHING_NEW")]);
+    expect(unknown).toEqual(["SOMETHING_NEW"]);
+    expect(result.snapshots[0]?.status).toBeNull();
+  });
+
+  it("stops on GraphQL errors, HTTP errors and network errors", async () => {
+    await expect(
+      run([json({ errors: [{ message: "bad" }], data: null }, 200)]),
+    ).rejects.toBeInstanceOf(UnexpectedResponseError);
+    await expect(run([raw("<html>", 200)])).rejects.toBeInstanceOf(UnexpectedResponseError);
+    await expect(run([raw("", 500)])).rejects.toBeInstanceOf(TransientError);
+    await expect(run([new Error("offline")])).rejects.toBeInstanceOf(TransientError);
+  });
+});

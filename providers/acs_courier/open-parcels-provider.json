@@ -1,0 +1,23 @@
+{
+  "schema": 1,
+  "id": "acs_courier",
+  "name": "ACS Courier",
+  "countries": ["GR", "CY"],
+  "provides": {
+    "connections": ["tracking"],
+    "live": false,
+    "fallback": false
+  },
+  "permissions": {
+    "network": [
+      {
+        "host": ".acscourier.net",
+        "reason": "Tracking data."
+      }
+    ],
+    "image_hosts": [],
+    "secrets": [],
+    "session": true,
+    "user_agent": false
+  }
+}

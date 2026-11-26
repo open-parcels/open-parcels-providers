@@ -1,0 +1,23 @@
+{
+  "schema": 1,
+  "id": "postnord",
+  "name": "PostNord",
+  "countries": ["DK", "SE", "NO", "FI"],
+  "provides": {
+    "connections": ["account", "tracking"],
+    "live": false,
+    "fallback": false
+  },
+  "permissions": {
+    "network": [
+      {
+        "host": ".postnord.com",
+        "reason": "Sign-in and parcel data."
+      }
+    ],
+    "image_hosts": [],
+    "secrets": ["token"],
+    "session": true,
+    "user_agent": false
+  }
+}

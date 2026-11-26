@@ -1,0 +1,112 @@
+import { describe, expect, it } from "vitest";
+import { econt } from "../../../src/carriers/econt/index.js";
+import { registerBuiltin } from "../../manifests.js";
+import { UnexpectedResponseError } from "../../../src/provider/errors.js";
+import { fakeContext, fakeNetwork, json, routeTable } from "../harness.js";
+
+// Made-up shipment numbers and values only.
+const ACTIVE = "9900000000001";
+const MISSING = "9900000000002";
+const ROUTE = "POST ee.econt.com/services/Shipments/ShipmentService.getShipmentStatuses.json";
+const plugin = registerBuiltin(econt);
+
+function shipment(number: string, extra: Record<string, unknown> = {}) {
+  return {
+    shipmentNumber: number,
+    shortDeliveryStatusEn: "In delivery office",
+    expectedDeliveryDate: "2026-11-20",
+    weight: 1.25,
+    trackingEvents: [
+      { time: 1_763_366_400_000, destinationType: "prepared", destinationDetailsEn: "Prepared" },
+      {
+        time: 1_763_452_800_000,
+        destinationType: "in_delivery_office",
+        destinationDetailsEn: "Office",
+      },
+    ],
+    ...extra,
+  };
+}
+
+describe("Econt tracking", () => {
+  it("looks codes up in one batch and reads status, day window, weight and history", async () => {
+    const { fetchImpl, calls } = fakeNetwork([
+      routeTable(
+        {
+          [ROUTE]: [
+            json(
+              { shipmentStatuses: [{ status: shipment(ACTIVE) }, { error: { message: "x" } }] },
+              200,
+            ),
+          ],
+        },
+        "host",
+      ),
+    ]);
+    const { base, unknown } = fakeContext(econt, fetchImpl);
+    const result = await plugin.track(base, {}, null, [ACTIVE, MISSING]);
+    expect(calls).toHaveLength(1);
+    expect(JSON.parse(calls[0]?.body ?? "{}")).toEqual({ shipmentNumbers: [ACTIVE, MISSING] });
+    expect(result.snapshots).toHaveLength(1);
+    expect(result.snapshots[0]).toMatchObject({
+      carrier: "econt",
+      trackingNumber: ACTIVE,
+      status: "in_transit",
+      expectedFrom: "2026-11-19T22:00:00.000Z",
+      expectedTo: "2026-11-20T21:59:59.000Z",
+      weightKg: 1.25,
+    });
+    expect(result.snapshots[0]?.history.map((event) => event.status)).toEqual([
+      "in_transit",
+      "registered",
+    ]);
+    expect(unknown).toEqual([]);
+  });
+
+  it("counts a delivery time as delivered", async () => {
+    const delivered = shipment(ACTIVE, {
+      shortDeliveryStatusEn: "Something",
+      deliveryTime: "2026-11-18T10:00:00+02:00",
+    });
+    const { fetchImpl } = fakeNetwork([
+      routeTable(
+        {
+          [ROUTE]: [json({ shipmentStatuses: [{ status: delivered }] }, 200)],
+        },
+        "host",
+      ),
+    ]);
+    const { base } = fakeContext(econt, fetchImpl);
+    const [found] = (await plugin.track(base, {}, null, [ACTIVE])).snapshots;
+    expect(found).toMatchObject({
+      status: "delivered",
+      deliveredAt: "2026-11-18T08:00:00.000Z",
+      expectedFrom: null,
+    });
+  });
+
+  it("reports an unknown status and stops on an answer for another code", async () => {
+    const { fetchImpl } = fakeNetwork([
+      routeTable(
+        {
+          [ROUTE]: [
+            json(
+              {
+                shipmentStatuses: [{ status: shipment(ACTIVE, { shortDeliveryStatusEn: "Odd" }) }],
+              },
+              200,
+            ),
+            json({ shipmentStatuses: [{ status: shipment(MISSING) }] }, 200),
+          ],
+        },
+        "host",
+      ),
+    ]);
+    const { base, unknown } = fakeContext(econt, fetchImpl);
+    expect((await plugin.track(base, {}, null, [ACTIVE])).snapshots[0]?.status).toBeNull();
+    expect(unknown).toEqual(["status:Odd"]);
+    await expect(plugin.track(base, {}, null, [ACTIVE])).rejects.toBeInstanceOf(
+      UnexpectedResponseError,
+    );
+  });
+});

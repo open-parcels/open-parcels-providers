@@ -1,0 +1,23 @@
+{
+  "schema": 1,
+  "id": "brt",
+  "name": "BRT",
+  "countries": ["IT"],
+  "provides": {
+    "connections": ["account"],
+    "live": false,
+    "fallback": false
+  },
+  "permissions": {
+    "network": [
+      {
+        "host": ".dpdgroup.com",
+        "reason": "Sign-in and parcel data."
+      }
+    ],
+    "image_hosts": [],
+    "secrets": ["credentials"],
+    "session": true,
+    "user_agent": false
+  }
+}

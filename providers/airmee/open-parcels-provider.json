@@ -1,0 +1,23 @@
+{
+  "schema": 1,
+  "id": "airmee",
+  "name": "Airmee",
+  "countries": ["SE"],
+  "provides": {
+    "connections": ["account", "tracking"],
+    "live": false,
+    "fallback": false
+  },
+  "permissions": {
+    "network": [
+      {
+        "host": ".airmee.com",
+        "reason": "Tracking and account data."
+      }
+    ],
+    "image_hosts": [],
+    "secrets": ["api_key", "token"],
+    "session": true,
+    "user_agent": false
+  }
+}

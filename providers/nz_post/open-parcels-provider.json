@@ -1,0 +1,23 @@
+{
+  "schema": 1,
+  "id": "nz_post",
+  "name": "NZ Post",
+  "countries": ["NZ"],
+  "provides": {
+    "connections": ["tracking"],
+    "live": false,
+    "fallback": false
+  },
+  "permissions": {
+    "network": [
+      {
+        "host": ".nzpost.co.nz",
+        "reason": "Tracking data."
+      }
+    ],
+    "image_hosts": [],
+    "secrets": [],
+    "session": false,
+    "user_agent": false
+  }
+}

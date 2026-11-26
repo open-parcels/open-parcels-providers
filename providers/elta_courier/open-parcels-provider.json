@@ -1,0 +1,23 @@
+{
+  "schema": 1,
+  "id": "elta_courier",
+  "name": "ELTA Courier",
+  "countries": ["GR"],
+  "provides": {
+    "connections": ["tracking"],
+    "live": false,
+    "fallback": false
+  },
+  "permissions": {
+    "network": [
+      {
+        "host": ".elta-courier.gr",
+        "reason": "Tracking data."
+      }
+    ],
+    "image_hosts": [],
+    "secrets": [],
+    "session": false,
+    "user_agent": false
+  }
+}

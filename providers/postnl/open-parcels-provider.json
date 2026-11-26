@@ -1,0 +1,23 @@
+{
+  "schema": 1,
+  "id": "postnl",
+  "name": "PostNL",
+  "countries": ["NL", "BE"],
+  "provides": {
+    "connections": ["account"],
+    "live": false,
+    "fallback": false
+  },
+  "permissions": {
+    "network": [
+      {
+        "host": ".postnl.nl",
+        "reason": "Sign-in and parcel data."
+      }
+    ],
+    "image_hosts": [],
+    "secrets": ["token"],
+    "session": true,
+    "user_agent": false
+  }
+}

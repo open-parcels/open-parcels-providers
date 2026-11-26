@@ -1,0 +1,23 @@
+{
+  "schema": 1,
+  "id": "early_bird",
+  "name": "Early Bird",
+  "countries": ["SE"],
+  "provides": {
+    "connections": ["tracking"],
+    "live": false,
+    "fallback": false
+  },
+  "permissions": {
+    "network": [
+      {
+        "host": ".earlybird.se",
+        "reason": "Tracking data."
+      }
+    ],
+    "image_hosts": [],
+    "secrets": [],
+    "session": false,
+    "user_agent": false
+  }
+}

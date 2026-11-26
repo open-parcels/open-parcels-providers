@@ -1,0 +1,23 @@
+{
+  "schema": 1,
+  "id": "canpar",
+  "name": "Canpar Express",
+  "countries": ["CA"],
+  "provides": {
+    "connections": ["tracking"],
+    "live": false,
+    "fallback": false
+  },
+  "permissions": {
+    "network": [
+      {
+        "host": ".canpar.com",
+        "reason": "Tracking data."
+      }
+    ],
+    "image_hosts": [],
+    "secrets": [],
+    "session": false,
+    "user_agent": false
+  }
+}

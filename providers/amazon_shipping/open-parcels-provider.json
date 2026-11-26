@@ -1,0 +1,39 @@
+{
+  "schema": 1,
+  "id": "amazon_shipping",
+  "name": "Amazon Shipping",
+  "countries": ["GB", "FR", "IT", "ES", "US"],
+  "provides": {
+    "connections": ["tracking"],
+    "live": false,
+    "fallback": false
+  },
+  "permissions": {
+    "network": [
+      {
+        "host": "track.amazon.co.uk",
+        "reason": "Amazon Shipping's public tracking page."
+      },
+      {
+        "host": "track.amazon.com",
+        "reason": "Amazon Shipping's public tracking page."
+      },
+      {
+        "host": "track.amazon.es",
+        "reason": "Amazon Shipping's public tracking page."
+      },
+      {
+        "host": "track.amazon.fr",
+        "reason": "Amazon Shipping's public tracking page."
+      },
+      {
+        "host": "track.amazon.it",
+        "reason": "Amazon Shipping's public tracking page."
+      }
+    ],
+    "image_hosts": [],
+    "secrets": [],
+    "session": false,
+    "user_agent": false
+  }
+}

@@ -1,0 +1,23 @@
+{
+  "schema": 1,
+  "id": "helthjem",
+  "name": "Helthjem",
+  "countries": ["NO"],
+  "provides": {
+    "connections": ["tracking"],
+    "live": false,
+    "fallback": false
+  },
+  "permissions": {
+    "network": [
+      {
+        "host": ".helthjem.no",
+        "reason": "Tracking data."
+      }
+    ],
+    "image_hosts": [],
+    "secrets": [],
+    "session": false,
+    "user_agent": false
+  }
+}

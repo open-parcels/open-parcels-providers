@@ -1,0 +1,24 @@
+{
+  "schema": 1,
+  "id": "magyar_posta",
+  "name": "Magyar Posta",
+  "countries": ["HU"],
+  "aliases": ["Hungarian Post"],
+  "provides": {
+    "connections": ["tracking"],
+    "live": false,
+    "fallback": false
+  },
+  "permissions": {
+    "network": [
+      {
+        "host": ".posta.hu",
+        "reason": "Tracking data."
+      }
+    ],
+    "image_hosts": [],
+    "secrets": [],
+    "session": false,
+    "user_agent": false
+  }
+}

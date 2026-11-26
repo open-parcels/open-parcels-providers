@@ -1,0 +1,117 @@
+import { describe, expect, it } from "vitest";
+import { trunkrs } from "../../../src/carriers/trunkrs/index.js";
+import { registerBuiltin } from "../../manifests.js";
+import { TransientError } from "../../../src/provider/errors.js";
+import { fakeContext, fakeNetwork, json, raw, routeTable, type Answer } from "../harness.js";
+
+/** Routes by `METHOD host/path`; anything unscripted answers 404 with an empty body. */
+const network = (table: Record<string, Answer[]>) =>
+  fakeNetwork([routeTable(table)], () => raw("", 404));
+
+// Made-up values only.
+const CODE = "TR0000000001";
+const POSTCODE = "9999 ZZ";
+const DETAILS = "GET api.trunkrs.app/v2/tracing/details";
+const plugin = registerBuiltin(trunkrs);
+const config = { postalCode: POSTCODE };
+
+function payload(state: string, extra: Record<string, unknown> = {}) {
+  return {
+    trunkrsNr: CODE,
+    senderName: "Voorbeeldwinkel",
+    currentState: { stateName: state, setAt: "2026-11-18T14:05:00Z" },
+    timeSlot: {
+      low: "2026-11-18T09:00:00Z",
+      high: "2026-11-18T22:00:00Z",
+      from: "2026-11-18T13:00:00Z",
+      to: "2026-11-18T15:00:00Z",
+    },
+    deliveryAttempts: [
+      { stateName: "DATA_PROCESSED", setAt: "2026-11-17T08:00:00Z" },
+      { stateName: "SHIPMENT_SORTED", setAt: "2026-11-18T05:00:00Z" },
+      { stateName: state, setAt: "2026-11-18T08:00:00Z" },
+    ],
+    auditLogs: [{ userSub: "driver-made-up" }],
+    ...extra,
+  };
+}
+
+describe("Trunkrs tracking", () => {
+  it("reads status, the narrow window and the history, with the postcode as credentials", async () => {
+    const { fetchImpl, calls } = network({
+      [DETAILS]: [json(payload("SHIPMENT_ACCEPTED_BY_DRIVER"), 200)],
+    });
+    const { base, unknownKeys: unknown } = fakeContext(trunkrs, fetchImpl);
+    const result = await plugin.track(base, config, null, [CODE]);
+    expect(result.snapshots[0]).toMatchObject({
+      carrier: "trunkrs",
+      trackingNumber: CODE,
+      status: "out_for_delivery",
+      delivered: false,
+      expectedFrom: "2026-11-18T13:00:00.000Z",
+      expectedTo: "2026-11-18T15:00:00.000Z",
+      sender: "Voorbeeldwinkel",
+      url: "https://parcel.trunkrs.nl/TR0000000001/9999ZZ",
+    });
+    expect(result.snapshots[0]?.history.map((event) => event.status)).toEqual([
+      "out_for_delivery",
+      "in_transit",
+      "registered",
+    ]);
+    expect(JSON.stringify(result.snapshots[0]?.raw)).not.toContain("driver-made-up");
+    const auth = calls[0]?.headers.get("authorization") ?? "";
+    expect(Buffer.from(auth.replace("Basic ", ""), "base64").toString()).toBe(`${CODE}:9999ZZ`);
+    expect(unknown).toEqual([]);
+  });
+
+  it("falls back to the wide slot and clears it once delivered", async () => {
+    const { fetchImpl } = network({
+      [DETAILS]: [
+        json(
+          payload("SHIPMENT_SORTED", {
+            timeSlot: { low: "2026-11-19T08:00:00Z", high: "2026-11-19T20:00:00Z" },
+          }),
+          200,
+        ),
+        json(payload("SHIPMENT_DELIVERED"), 200),
+      ],
+    });
+    const { base } = fakeContext(trunkrs, fetchImpl);
+    const first = await plugin.track(base, config, null, [CODE]);
+    expect(first.snapshots[0]).toMatchObject({ expectedFrom: "2026-11-19T08:00:00.000Z" });
+    const second = await plugin.track(base, config, null, [CODE]);
+    expect(second.snapshots[0]).toMatchObject({
+      status: "delivered",
+      delivered: true,
+      deliveredAt: "2026-11-18T14:05:00.000Z",
+      expectedFrom: null,
+      expectedTo: null,
+    });
+  });
+
+  it("treats a refused number and postcode pair as not found", async () => {
+    const { fetchImpl } = network({ [DETAILS]: [raw("", 401)] });
+    const { base } = fakeContext(trunkrs, fetchImpl);
+    const result = await plugin.track(base, config, null, [CODE]);
+    expect(result).toEqual({ snapshots: [], complete: true });
+  });
+
+  it("reports an unknown state and keeps the raw value", async () => {
+    const { fetchImpl } = network({
+      [DETAILS]: [json(payload("SHIPMENT_MADE_UP"), 200)],
+    });
+    const { base, unknownKeys: unknown } = fakeContext(trunkrs, fetchImpl);
+    const result = await plugin.track(base, config, null, [CODE]);
+    expect(result.snapshots[0]).toMatchObject({ status: null, rawStatus: "SHIPMENT_MADE_UP" });
+    expect(unknown).toContain("SHIPMENT_MADE_UP");
+  });
+
+  it("fails transiently on a server error or a network error", async () => {
+    const { fetchImpl } = network({
+      [DETAILS]: [raw("", 502), new Error("offline")],
+    });
+    const { base } = fakeContext(trunkrs, fetchImpl);
+    await expect(plugin.track(base, config, null, [CODE])).rejects.toBeInstanceOf(TransientError);
+    await expect(plugin.track(base, config, null, [CODE])).rejects.toBeInstanceOf(TransientError);
+  });
+});

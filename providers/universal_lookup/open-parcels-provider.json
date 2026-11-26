@@ -1,0 +1,24 @@
+{
+  "schema": 1,
+  "id": "universal_lookup",
+  "name": "Universal lookup",
+  "countries": ["*"],
+  "provides": {
+    "connections": ["tracking"],
+    "live": false,
+    "fallback": true
+  },
+  "permissions": {
+    "network": [
+      {
+        "config": "url",
+        "reason": "The universal lookup server the user runs, at the address in its settings.",
+        "private_network_opt_in": "allow_private_network"
+      }
+    ],
+    "image_hosts": [],
+    "secrets": [],
+    "session": true,
+    "user_agent": false
+  }
+}

@@ -1,0 +1,76 @@
+{
+  "schema": 1,
+  "id": "gls",
+  "name": "GLS",
+  "countries": [
+    "NL",
+    "DE",
+    "ES",
+    "PT",
+    "PL",
+    "US",
+    "CA",
+    "AT",
+    "BE",
+    "CH",
+    "CZ",
+    "DK",
+    "FI",
+    "FR",
+    "HR",
+    "HU",
+    "IE",
+    "IT",
+    "LI",
+    "LU",
+    "RO",
+    "RS",
+    "SI",
+    "SK"
+  ],
+  "provides": {
+    "connections": ["tracking"],
+    "live": false,
+    "fallback": false
+  },
+  "permissions": {
+    "network": [
+      {
+        "host": ".gls-canada.com",
+        "reason": "Tracking data."
+      },
+      {
+        "host": ".gls-group.com",
+        "reason": "Tracking data."
+      },
+      {
+        "host": ".gls-group.eu",
+        "reason": "Tracking data."
+      },
+      {
+        "host": ".gls-poland.com.pl",
+        "reason": "Tracking data."
+      },
+      {
+        "host": ".gls-spain.es",
+        "reason": "Tracking data."
+      },
+      {
+        "host": ".gls-us.com",
+        "reason": "Tracking data."
+      },
+      {
+        "host": ".gls.nl",
+        "reason": "Tracking data."
+      },
+      {
+        "host": ".glsnxt.com",
+        "reason": "Tracking data."
+      }
+    ],
+    "image_hosts": [],
+    "secrets": [],
+    "session": true,
+    "user_agent": false
+  }
+}

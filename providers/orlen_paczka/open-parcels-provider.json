@@ -1,0 +1,23 @@
+{
+  "schema": 1,
+  "id": "orlen_paczka",
+  "name": "ORLEN Paczka",
+  "countries": ["PL"],
+  "provides": {
+    "connections": ["tracking"],
+    "live": false,
+    "fallback": false
+  },
+  "permissions": {
+    "network": [
+      {
+        "host": ".orlenpaczka.pl",
+        "reason": "Tracking data."
+      }
+    ],
+    "image_hosts": [],
+    "secrets": [],
+    "session": false,
+    "user_agent": false
+  }
+}

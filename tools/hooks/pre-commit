@@ -1,0 +1,42 @@
+#!/bin/sh
+# Rejects commits that would publish local data or secrets. Installed by `npm install` (the
+# workspace `prepare` script sets core.hooksPath to tools/hooks).
+# Personal patterns (names, local paths) go one extended regex per line into the untracked
+# .git/info/pii-patterns, so they are never committed themselves.
+set -eu
+
+fail=0
+
+# Database, key and environment files.
+files=$(git diff --cached --name-only --diff-filter=ACMR)
+bad_files=$(printf '%s\n' "$files" \
+  | grep -E '(\.(db|db-wal|db-shm|sqlite|pem|key|har|eml)$|(^|/)\.env(\.[^/]*)?$|(^|/)secret\.key$)' \
+  | grep -vE '(^|/)\.env\.example$|^providers/[^/]+/fixtures/.*\.eml$' || true)
+if [ -n "$bad_files" ]; then
+  printf 'pre-commit: these files must not be committed:\n%s\n' "$bad_files" >&2
+  fail=1
+fi
+
+added=$(git diff --cached -U0 --no-color --diff-filter=ACMR | grep -E '^\+[^+]' || true)
+
+# Literal strings assigned to password or secret keys (build test values from parts instead).
+literal=$(printf '%s\n' "$added" \
+  | grep -inE '(password|passwd|secret)["'"'"']?[[:space:]]*[:=][[:space:]]*["'"'"'`][^"'"'"'`]+["'"'"'`]' || true)
+if [ -n "$literal" ]; then
+  printf 'pre-commit: literal password or secret values:\n%s\n' "$literal" >&2
+  fail=1
+fi
+
+patterns="$(git rev-parse --git-path info/pii-patterns)"
+if [ -s "$patterns" ]; then
+  pii=$(printf '%s\n' "$added" | grep -inEf "$patterns" || true)
+  if [ -n "$pii" ]; then
+    printf 'pre-commit: lines match .git/info/pii-patterns:\n%s\n' "$pii" >&2
+    fail=1
+  fi
+fi
+
+if [ "$fail" -ne 0 ]; then
+  echo 'pre-commit: commit rejected (see AGENT.md).' >&2
+fi
+exit "$fail"

@@ -1,0 +1,23 @@
+{
+  "schema": 1,
+  "id": "quickpac",
+  "name": "Quickpac",
+  "countries": ["CH"],
+  "provides": {
+    "connections": ["tracking"],
+    "live": false,
+    "fallback": false
+  },
+  "permissions": {
+    "network": [
+      {
+        "host": ".quickpac.ch",
+        "reason": "Tracking data."
+      }
+    ],
+    "image_hosts": [],
+    "secrets": [],
+    "session": false,
+    "user_agent": false
+  }
+}

@@ -1,0 +1,27 @@
+{
+  "schema": 1,
+  "id": "ppl_cz",
+  "name": "PPL CZ",
+  "countries": ["CZ"],
+  "provides": {
+    "connections": ["account", "tracking"],
+    "live": false,
+    "fallback": false
+  },
+  "permissions": {
+    "network": [
+      {
+        "host": "api.dhl.com",
+        "reason": "Tracking and account data."
+      },
+      {
+        "host": "pplczmobidentity.b2clogin.com",
+        "reason": "Sign-in."
+      }
+    ],
+    "image_hosts": [],
+    "secrets": ["token"],
+    "session": true,
+    "user_agent": false
+  }
+}

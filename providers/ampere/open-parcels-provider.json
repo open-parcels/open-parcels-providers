@@ -1,0 +1,27 @@
+{
+  "schema": 1,
+  "id": "ampere",
+  "name": "Ampère",
+  "countries": ["NL"],
+  "provides": {
+    "connections": ["account"],
+    "live": false,
+    "fallback": false
+  },
+  "permissions": {
+    "network": [
+      {
+        "host": ".amperebezorgt.nl",
+        "reason": "Account data."
+      },
+      {
+        "host": "link.bol.com",
+        "reason": "Account data."
+      }
+    ],
+    "image_hosts": [],
+    "secrets": ["api_key"],
+    "session": true,
+    "user_agent": false
+  }
+}

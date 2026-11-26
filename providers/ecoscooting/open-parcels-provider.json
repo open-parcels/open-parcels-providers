@@ -1,0 +1,23 @@
+{
+  "schema": 1,
+  "id": "ecoscooting",
+  "name": "Ecoscooting",
+  "countries": ["ES"],
+  "provides": {
+    "connections": ["tracking"],
+    "live": false,
+    "fallback": false
+  },
+  "permissions": {
+    "network": [
+      {
+        "host": "de-link.cainiao.com",
+        "reason": "Tracking data."
+      }
+    ],
+    "image_hosts": [],
+    "secrets": [],
+    "session": false,
+    "user_agent": false
+  }
+}

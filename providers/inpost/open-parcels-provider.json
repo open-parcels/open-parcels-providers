@@ -1,0 +1,31 @@
+{
+  "schema": 1,
+  "id": "inpost",
+  "name": "InPost",
+  "countries": ["PL", "IT", "PT", "GB", "ES"],
+  "provides": {
+    "connections": ["account", "tracking"],
+    "live": false,
+    "fallback": false
+  },
+  "permissions": {
+    "network": [
+      {
+        "host": ".easypack24.net",
+        "reason": "Tracking and account data."
+      },
+      {
+        "host": ".inposteasy.com",
+        "reason": "Tracking and account data."
+      },
+      {
+        "host": "account.inpost-group.com",
+        "reason": "Sign-in."
+      }
+    ],
+    "image_hosts": [],
+    "secrets": ["token"],
+    "session": true,
+    "user_agent": false
+  }
+}

@@ -1,0 +1,31 @@
+{
+  "schema": 1,
+  "id": "dpd",
+  "name": "DPD",
+  "countries": ["DE"],
+  "logo": "dpd.svg",
+  "provides": {
+    "connections": ["account", "tracking"],
+    "live": false,
+    "fallback": false
+  },
+  "permissions": {
+    "network": [
+      {
+        "host": ".dpd.com",
+        "reason": "Tracking and account data."
+      },
+      {
+        "host": ".dpd.de",
+        "reason": "Tracking and account data."
+      }
+    ],
+    "image_hosts": [],
+    "secrets": ["credentials"],
+    "session": true,
+    "user_agent": true
+  },
+  "email": {
+    "from_domains": [".dpd.at", ".dpd.de"]
+  }
+}

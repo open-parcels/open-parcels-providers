@@ -1,0 +1,23 @@
+{
+  "schema": 1,
+  "id": "dao",
+  "name": "DAO",
+  "countries": ["DK"],
+  "provides": {
+    "connections": ["account"],
+    "live": false,
+    "fallback": false
+  },
+  "permissions": {
+    "network": [
+      {
+        "host": ".dao.as",
+        "reason": "Sign-in and parcel data."
+      }
+    ],
+    "image_hosts": [],
+    "secrets": ["token"],
+    "session": true,
+    "user_agent": false
+  }
+}

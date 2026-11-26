@@ -1,0 +1,27 @@
+{
+  "schema": 1,
+  "id": "tipsa",
+  "name": "TIPSA",
+  "countries": ["ES", "PT", "AD"],
+  "provides": {
+    "connections": ["tracking"],
+    "live": false,
+    "fallback": false
+  },
+  "permissions": {
+    "network": [
+      {
+        "host": ".tip-sa.com",
+        "reason": "Tracking data."
+      },
+      {
+        "host": ".tipsa-dinapaq.com",
+        "reason": "Tracking data."
+      }
+    ],
+    "image_hosts": [],
+    "secrets": [],
+    "session": false,
+    "user_agent": false
+  }
+}

@@ -1,0 +1,24 @@
+{
+  "schema": 1,
+  "id": "17track",
+  "name": "17TRACK",
+  "countries": ["*"],
+  "aliases": ["17track"],
+  "provides": {
+    "connections": ["tracking"],
+    "live": false,
+    "fallback": true
+  },
+  "permissions": {
+    "network": [
+      {
+        "host": ".17track.net",
+        "reason": "Tracking data."
+      }
+    ],
+    "image_hosts": [],
+    "secrets": ["api_key"],
+    "session": true,
+    "user_agent": false
+  }
+}

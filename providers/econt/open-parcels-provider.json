@@ -1,0 +1,23 @@
+{
+  "schema": 1,
+  "id": "econt",
+  "name": "Econt",
+  "countries": ["BG"],
+  "provides": {
+    "connections": ["tracking"],
+    "live": false,
+    "fallback": false
+  },
+  "permissions": {
+    "network": [
+      {
+        "host": ".econt.com",
+        "reason": "Tracking data."
+      }
+    ],
+    "image_hosts": [],
+    "secrets": [],
+    "session": false,
+    "user_agent": false
+  }
+}

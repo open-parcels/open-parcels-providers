@@ -1,0 +1,23 @@
+{
+  "schema": 1,
+  "id": "paack",
+  "name": "Paack",
+  "countries": ["ES", "PT", "FR", "IT"],
+  "provides": {
+    "connections": ["tracking"],
+    "live": false,
+    "fallback": false
+  },
+  "permissions": {
+    "network": [
+      {
+        "host": ".paack.co",
+        "reason": "Tracking data."
+      }
+    ],
+    "image_hosts": [],
+    "secrets": [],
+    "session": false,
+    "user_agent": false
+  }
+}

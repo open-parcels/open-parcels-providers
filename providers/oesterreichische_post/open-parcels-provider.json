@@ -1,0 +1,24 @@
+{
+  "schema": 1,
+  "id": "oesterreichische_post",
+  "name": "Österreichische Post",
+  "countries": ["AT"],
+  "aliases": ["Austrian Post", "Post.at"],
+  "provides": {
+    "connections": ["tracking"],
+    "live": false,
+    "fallback": false
+  },
+  "permissions": {
+    "network": [
+      {
+        "host": ".post.at",
+        "reason": "Tracking data."
+      }
+    ],
+    "image_hosts": [],
+    "secrets": [],
+    "session": false,
+    "user_agent": false
+  }
+}

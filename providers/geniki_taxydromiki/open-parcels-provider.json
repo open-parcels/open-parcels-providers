@@ -1,0 +1,23 @@
+{
+  "schema": 1,
+  "id": "geniki_taxydromiki",
+  "name": "Geniki Taxydromiki",
+  "countries": ["GR", "CY"],
+  "provides": {
+    "connections": ["tracking"],
+    "live": false,
+    "fallback": false
+  },
+  "permissions": {
+    "network": [
+      {
+        "host": ".taxydromiki.com",
+        "reason": "Tracking data."
+      }
+    ],
+    "image_hosts": [],
+    "secrets": [],
+    "session": false,
+    "user_agent": false
+  }
+}

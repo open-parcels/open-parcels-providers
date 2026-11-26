@@ -1,0 +1,24 @@
+{
+  "schema": 1,
+  "id": "poczta_polska",
+  "name": "Poczta Polska",
+  "countries": ["PL"],
+  "aliases": ["Polish Post"],
+  "provides": {
+    "connections": ["tracking"],
+    "live": false,
+    "fallback": false
+  },
+  "permissions": {
+    "network": [
+      {
+        "host": ".poczta-polska.pl",
+        "reason": "Tracking data."
+      }
+    ],
+    "image_hosts": [],
+    "secrets": [],
+    "session": false,
+    "user_agent": false
+  }
+}

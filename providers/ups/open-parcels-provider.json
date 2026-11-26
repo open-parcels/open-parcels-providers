@@ -1,0 +1,28 @@
+{
+  "schema": 1,
+  "id": "ups",
+  "name": "UPS",
+  "countries": ["*"],
+  "aliases": ["United Parcel Service"],
+  "logo": "ups.svg",
+  "provides": {
+    "connections": ["tracking"],
+    "live": false,
+    "fallback": false
+  },
+  "permissions": {
+    "network": [
+      {
+        "host": ".ups.com",
+        "reason": "Tracking data."
+      }
+    ],
+    "image_hosts": [],
+    "secrets": ["api_key"],
+    "session": true,
+    "user_agent": true
+  },
+  "email": {
+    "from_domains": [".ups.com"]
+  }
+}

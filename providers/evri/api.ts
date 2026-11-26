@@ -1,0 +1,165 @@
+import { z } from "zod";
+import {
+  TransientError,
+  UnexpectedResponseError,
+  type HttpResponse,
+  type ProviderLogger,
+  type SessionStore,
+  type ProviderHttp,
+  asObject,
+  carrierKey,
+  isObject,
+  objects,
+  readJson,
+  text,
+  type Json,
+} from "../../provider/api.js";
+
+export const HOST = "tracking.platform-apis.evri.com";
+/**
+ * The key Evri's public tracking website sends with every request (in the shared rules). It
+ * identifies the website, not a user; a refusal of it is Evri's change to make, never a reason
+ * to ask the user anything.
+ */
+const websiteKey = (): string => carrierKey("evri", "website_key");
+/** Most parcel ids remembered per connection; the oldest are dropped first. */
+const MAX_REMEMBERED = 200;
+
+const rememberedSchema = z.record(z.string(), z.string());
+
+async function get(http: ProviderHttp, logger: ProviderLogger, url: URL): Promise<HttpResponse> {
+  const response = await http.request(url, {
+    headers: { accept: "application/json", apikey: websiteKey() },
+  });
+  if (response.status === 401 || response.status === 403) {
+    const edge =
+      (response.headers.get("server") ?? "").toLowerCase() === "cloudfront" ||
+      (response.headers.get("content-type") ?? "").toLowerCase().includes("html");
+    logger.warn(
+      { status: response.status, edge },
+      edge ? "Evri's edge blocked the request." : "Evri refused its own website key.",
+    );
+    throw new TransientError(`Evri refused the request (HTTP ${response.status}).`);
+  }
+  return response;
+}
+
+/** Evri's internal id for a tracking number; null when Evri says the reference is invalid. */
+async function resolve(
+  http: ProviderHttp,
+  logger: ProviderLogger,
+  code: string,
+): Promise<string | null> {
+  const response = await get(
+    http,
+    logger,
+    new URL(`https://${HOST}/v1/parcels/reference/${encodeURIComponent(code)}`),
+  );
+  const payload = asObject(readJson(response, "Evri reference lookup"));
+  if (
+    response.status === 400 &&
+    objects(payload["errors"]).some((error) =>
+      (text(error["message"]) ?? "").startsWith("Invalid reference:"),
+    )
+  ) {
+    return null;
+  }
+  if (response.status !== 200) {
+    throw new TransientError(`Evri reference lookup answered HTTP ${response.status}.`);
+  }
+  const identifiers = payload["parcelIdentifiers"];
+  if (!Array.isArray(identifiers)) {
+    throw new UnexpectedResponseError("Evri's reference lookup has no parcel identifiers.");
+  }
+  return (
+    objects(identifiers)
+      .map((entry) => text(entry["urn"]))
+      .find((urn) => urn !== null) ?? null
+  );
+}
+
+/** The parcel whose identifiers include the tracking number; a single result is taken as it. */
+async function detail(
+  http: ProviderHttp,
+  logger: ProviderLogger,
+  ids: { code: string; urn: string; postcode: string },
+): Promise<Json | null> {
+  const url = new URL(`https://${HOST}/v1/parcels`);
+  url.searchParams.set("uniqueIds", ids.urn);
+  url.searchParams.set("postcode", ids.postcode);
+  const response = await get(http, logger, url);
+  if (response.status !== 200) {
+    throw new TransientError(`Evri parcel lookup answered HTTP ${response.status}.`);
+  }
+  const results = asObject(readJson(response, "Evri parcel lookup"))["results"];
+  if (!Array.isArray(results)) {
+    throw new UnexpectedResponseError("Evri's parcel lookup has no results.");
+  }
+  const parcels = results.filter(isObject);
+  if (parcels.length === 0) {
+    return null;
+  }
+  // Only the parcel that names this tracking number or the id it was looked up by, never just the first.
+  const matching = parcels.find((parcel) =>
+    objects(parcel["parcelIdentifiers"]).some((entry) => {
+      const value = (text(entry["value"]) ?? text(entry["barcode"]))?.toUpperCase();
+      return value === ids.code || text(entry["urn"]) === ids.urn;
+    }),
+  );
+  if (matching !== undefined) {
+    return matching;
+  }
+  throw new UnexpectedResponseError("Evri's parcel lookup did not include the barcode.");
+}
+
+/**
+ * Looks tracking numbers up in two steps: tracking number to Evri's id, then id plus postcode to the parcel.
+ * Ids are remembered in the session store; a remembered id that finds nothing is resolved again,
+ * once, in case Evri re-issued it.
+ */
+export class EvriTracking {
+  /** Insertion-ordered, so the oldest entries come first. */
+  readonly #remembered: Map<string, string>;
+  #changed = false;
+
+  constructor(
+    private readonly http: ProviderHttp,
+    private readonly logger: ProviderLogger,
+    private readonly session: SessionStore,
+  ) {
+    const stored = rememberedSchema.safeParse(session.load());
+    this.#remembered = new Map(stored.success ? Object.entries(stored.data) : []);
+  }
+
+  async parcel(code: string, postcode: string): Promise<Json | null> {
+    const known = this.#remembered.get(code);
+    if (known !== undefined) {
+      const found = await detail(this.http, this.logger, { code, urn: known, postcode });
+      if (found !== null) {
+        return found;
+      }
+    }
+    const urn = await resolve(this.http, this.logger, code);
+    if (urn === null || urn === known) {
+      return null;
+    }
+    this.#remember(code, urn);
+    return detail(this.http, this.logger, { code, urn, postcode });
+  }
+
+  #remember(code: string, urn: string): void {
+    this.#remembered.delete(code);
+    this.#remembered.set(code, urn);
+    const codes = [...this.#remembered.keys()];
+    for (const old of codes.slice(0, Math.max(0, codes.length - MAX_REMEMBERED))) {
+      this.#remembered.delete(old);
+    }
+    this.#changed = true;
+  }
+
+  async save(): Promise<void> {
+    if (this.#changed) {
+      await this.session.save(Object.fromEntries(this.#remembered));
+    }
+  }
+}

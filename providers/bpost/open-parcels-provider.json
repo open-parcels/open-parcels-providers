@@ -1,0 +1,23 @@
+{
+  "schema": 1,
+  "id": "bpost",
+  "name": "bpost",
+  "countries": ["BE"],
+  "provides": {
+    "connections": ["account", "tracking"],
+    "live": false,
+    "fallback": false
+  },
+  "permissions": {
+    "network": [
+      {
+        "host": ".bpost.cloud",
+        "reason": "Tracking and account data."
+      }
+    ],
+    "image_hosts": [],
+    "secrets": ["credentials"],
+    "session": true,
+    "user_agent": false
+  }
+}

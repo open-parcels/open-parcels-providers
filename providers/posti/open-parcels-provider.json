@@ -1,0 +1,27 @@
+{
+  "schema": 1,
+  "id": "posti",
+  "name": "Posti",
+  "countries": ["FI"],
+  "provides": {
+    "connections": ["account", "tracking"],
+    "live": false,
+    "fallback": false
+  },
+  "permissions": {
+    "network": [
+      {
+        "host": ".posti.fi",
+        "reason": "Sign-in and parcel data."
+      },
+      {
+        "host": "tunnistus.telia.fi",
+        "reason": "Sign-in."
+      }
+    ],
+    "image_hosts": [],
+    "secrets": ["token"],
+    "session": true,
+    "user_agent": false
+  }
+}

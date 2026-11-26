@@ -1,0 +1,78 @@
+/** Endpoints and fixed values of the DHL back ends this provider talks to. */
+
+import { carrierKey, rulesTrackingUrl } from "../../provider/api.js";
+
+export const GATEWAY_URL = "https://api-gw.dhlparcel.nl/track-trace";
+/** Codes per gateway request; a long list is split rather than sent as one huge query. */
+export const GATEWAY_BATCH = 20;
+
+export const UNIFIED_URL = "https://api-eu.dhl.com/track/shipments";
+
+export const DE_OIDC_ROOT = "https://login.dhl.de/af5f9bb6-27ad-4af4-9445-008e7a5cddb8/login";
+export const DE_DISCOVERY_URL = `${DE_OIDC_ROOT}/.well-known/openid-configuration`;
+/**
+ * The sign-in start has no network access, so the authorization endpoint cannot be discovered
+ * there; it is the tenant's standard path. The token endpoint is always discovered.
+ */
+export const DE_AUTHORIZE_URL = `${DE_OIDC_ROOT}/authorize`;
+/** The DHL Paket app's public client; it authenticates with an empty Basic-auth secret. */
+export const DE_CLIENT_ID = carrierKey("dhl", "de_client_id");
+export const DE_REDIRECT_URI = "dhllogin://de.deutschepost.dhl/login";
+export const DE_SCOPE = "openid offline_access";
+/** The claim that links a token to its account; without it the inbox is silently empty. */
+export const DE_ACCOUNT_CLAIM = "post_number";
+/** Without asking for these ID-token claims the inbox endpoint answers with an empty list. */
+export const DE_LOGIN_CLAIMS = JSON.stringify({
+  id_token: {
+    email: null,
+    post_number: null,
+    twofa: null,
+    service_mask: null,
+    deactivate_account: null,
+    last_login: null,
+    customer_type: null,
+    display_name: null,
+    data_confirmation_required: null,
+  },
+});
+/**
+ * The token endpoint rejects generic clients; it is sent the app's own headers. Only for
+ * login.dhl.de and www.dhl.de; every other host gets the honest default User-Agent.
+ */
+export const DE_TOKEN_HEADERS: Readonly<Record<string, string>> = {
+  accept: "application/json, text/plain, */*",
+  "content-type": "application/x-www-form-urlencoded",
+  origin: "https://login.dhl.de",
+  "user-agent": carrierKey("dhl", "de_token_user_agent"),
+  "accept-language": "de-de",
+};
+export const DE_TRACKING_URL = "https://www.dhl.de/int-verfolgen/data/search";
+export const DE_TRACKING_HEADERS: Readonly<Record<string, string>> = {
+  accept: "application/json",
+  "content-type": "application/json",
+  "user-agent": carrierKey("dhl", "de_tracking_user_agent"),
+};
+/** The ID token travels in this cookie, to www.dhl.de only. */
+export const DE_COOKIE_NAME = "dhli";
+/** Refresh a cached ID token this long before it expires. */
+export const DE_TOKEN_MARGIN_MS = 5 * 60_000;
+/** Lifetime assumed when a token response has no `expires_in`. */
+export const DE_TOKEN_LIFETIME_MS = 30 * 60_000;
+/** Stub inbox entries looked up by number per run, at most. */
+export const DE_ENRICH_LIMIT = 5;
+export const BERLIN = "Europe/Berlin";
+
+/** DHL's international tracking page, from the shared rules. */
+export function publicTrackingUrl(code: string): string | null {
+  return rulesTrackingUrl("dhl", code);
+}
+
+/** dhl.de's tracking page, from the shared rules. */
+export function germanTrackingUrl(code: string): string | null {
+  return rulesTrackingUrl("dhl", code, "de");
+}
+
+/** DHL eCommerce Netherlands' page, which looks a parcel up with the receiver's postcode. */
+export function dutchTrackingUrl(code: string, postcode: string): string | null {
+  return rulesTrackingUrl("dhl", code, "nl", { postcode: postcode.replace(/\s/g, "") });
+}

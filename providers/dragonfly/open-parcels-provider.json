@@ -1,0 +1,31 @@
+{
+  "schema": 1,
+  "id": "dragonfly",
+  "name": "Dragonfly",
+  "countries": ["NL", "AU", "CA"],
+  "provides": {
+    "connections": ["tracking"],
+    "live": false,
+    "fallback": false
+  },
+  "permissions": {
+    "network": [
+      {
+        "host": ".dragonflyshipping.com.au",
+        "reason": "Tracking data."
+      },
+      {
+        "host": ".dragonflyshipping.nl",
+        "reason": "Tracking data."
+      },
+      {
+        "host": ".intelcom.ca",
+        "reason": "Tracking data."
+      }
+    ],
+    "image_hosts": [],
+    "secrets": [],
+    "session": false,
+    "user_agent": false
+  }
+}

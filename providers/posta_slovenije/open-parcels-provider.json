@@ -1,0 +1,24 @@
+{
+  "schema": 1,
+  "id": "posta_slovenije",
+  "name": "Pošta Slovenije",
+  "countries": ["SI"],
+  "aliases": ["Post of Slovenia"],
+  "provides": {
+    "connections": ["account", "tracking"],
+    "live": false,
+    "fallback": false
+  },
+  "permissions": {
+    "network": [
+      {
+        "host": ".posta.si",
+        "reason": "Sign-in and parcel data."
+      }
+    ],
+    "image_hosts": [],
+    "secrets": ["credentials"],
+    "session": true,
+    "user_agent": true
+  }
+}

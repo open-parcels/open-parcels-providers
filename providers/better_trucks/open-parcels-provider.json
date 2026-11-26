@@ -1,0 +1,23 @@
+{
+  "schema": 1,
+  "id": "better_trucks",
+  "name": "Better Trucks",
+  "countries": ["US"],
+  "provides": {
+    "connections": ["tracking"],
+    "live": false,
+    "fallback": false
+  },
+  "permissions": {
+    "network": [
+      {
+        "host": ".bettertrucks.com",
+        "reason": "Tracking data."
+      }
+    ],
+    "image_hosts": [],
+    "secrets": [],
+    "session": false,
+    "user_agent": false
+  }
+}

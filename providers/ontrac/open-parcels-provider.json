@@ -1,0 +1,23 @@
+{
+  "schema": 1,
+  "id": "ontrac",
+  "name": "OnTrac",
+  "countries": ["US"],
+  "provides": {
+    "connections": ["tracking"],
+    "live": false,
+    "fallback": false
+  },
+  "permissions": {
+    "network": [
+      {
+        "host": ".ontrac.com",
+        "reason": "Tracking data."
+      }
+    ],
+    "image_hosts": [],
+    "secrets": [],
+    "session": false,
+    "user_agent": false
+  }
+}

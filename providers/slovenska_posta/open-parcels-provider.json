@@ -1,0 +1,24 @@
+{
+  "schema": 1,
+  "id": "slovenska_posta",
+  "name": "Slovenská pošta",
+  "countries": ["SK"],
+  "aliases": ["Slovak Post"],
+  "provides": {
+    "connections": ["tracking"],
+    "live": false,
+    "fallback": false
+  },
+  "permissions": {
+    "network": [
+      {
+        "host": ".posta.sk",
+        "reason": "Tracking data."
+      }
+    ],
+    "image_hosts": [],
+    "secrets": [],
+    "session": false,
+    "user_agent": false
+  }
+}

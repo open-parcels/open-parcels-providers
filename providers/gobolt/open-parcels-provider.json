@@ -1,0 +1,23 @@
+{
+  "schema": 1,
+  "id": "gobolt",
+  "name": "GoBolt",
+  "countries": ["CA"],
+  "provides": {
+    "connections": ["tracking"],
+    "live": false,
+    "fallback": false
+  },
+  "permissions": {
+    "network": [
+      {
+        "host": ".secondcloset.com",
+        "reason": "Tracking data."
+      }
+    ],
+    "image_hosts": [],
+    "secrets": [],
+    "session": false,
+    "user_agent": false
+  }
+}

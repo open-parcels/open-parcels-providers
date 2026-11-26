@@ -1,0 +1,28 @@
+{
+  "schema": 1,
+  "id": "swiss_post",
+  "name": "Swiss Post",
+  "countries": ["CH", "LI"],
+  "aliases": ["Die Post", "La Poste Suisse", "Posta Svizzera"],
+  "provides": {
+    "connections": ["account", "tracking"],
+    "live": false,
+    "fallback": false
+  },
+  "permissions": {
+    "network": [
+      {
+        "host": ".post.ch",
+        "reason": "Tracking and account data."
+      },
+      {
+        "host": ".swissid.ch",
+        "reason": "Sign-in."
+      }
+    ],
+    "image_hosts": [],
+    "secrets": ["token"],
+    "session": true,
+    "user_agent": false
+  }
+}

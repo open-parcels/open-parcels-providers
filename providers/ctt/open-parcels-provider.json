@@ -1,0 +1,27 @@
+{
+  "schema": 1,
+  "id": "ctt",
+  "name": "CTT",
+  "countries": ["PT", "ES"],
+  "provides": {
+    "connections": ["tracking"],
+    "live": false,
+    "fallback": false
+  },
+  "permissions": {
+    "network": [
+      {
+        "host": ".ctt.pt",
+        "reason": "Tracking data."
+      },
+      {
+        "host": ".cttexpress.com",
+        "reason": "Tracking data."
+      }
+    ],
+    "image_hosts": [],
+    "secrets": [],
+    "session": true,
+    "user_agent": true
+  }
+}

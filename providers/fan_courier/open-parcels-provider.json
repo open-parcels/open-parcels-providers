@@ -1,0 +1,23 @@
+{
+  "schema": 1,
+  "id": "fan_courier",
+  "name": "FAN Courier",
+  "countries": ["RO"],
+  "provides": {
+    "connections": ["tracking"],
+    "live": false,
+    "fallback": false
+  },
+  "permissions": {
+    "network": [
+      {
+        "host": ".fancourier.ro",
+        "reason": "Tracking data."
+      }
+    ],
+    "image_hosts": [],
+    "secrets": [],
+    "session": false,
+    "user_agent": false
+  }
+}

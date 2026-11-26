@@ -1,0 +1,32 @@
+{
+  "schema": 1,
+  "id": "hermes",
+  "name": "Hermes",
+  "countries": ["DE"],
+  "aliases": ["myHermes"],
+  "logo": "hermes.svg",
+  "provides": {
+    "connections": ["account", "tracking"],
+    "live": false,
+    "fallback": false
+  },
+  "permissions": {
+    "network": [
+      {
+        "host": ".hc.de",
+        "reason": "Tracking and account data."
+      },
+      {
+        "host": ".my-deliveries.de",
+        "reason": "Tracking and account data."
+      }
+    ],
+    "image_hosts": [],
+    "secrets": ["credentials"],
+    "session": true,
+    "user_agent": false
+  },
+  "email": {
+    "from_domains": [".hermesworld.com", ".myhermes.de"]
+  }
+}

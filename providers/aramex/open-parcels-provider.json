@@ -1,0 +1,27 @@
+{
+  "schema": 1,
+  "id": "aramex",
+  "name": "Aramex",
+  "countries": ["AU", "NZ"],
+  "provides": {
+    "connections": ["tracking"],
+    "live": false,
+    "fallback": false
+  },
+  "permissions": {
+    "network": [
+      {
+        "host": ".aramex.co.nz",
+        "reason": "Tracking data."
+      },
+      {
+        "host": ".aramex.com.au",
+        "reason": "Tracking data."
+      }
+    ],
+    "image_hosts": [],
+    "secrets": [],
+    "session": false,
+    "user_agent": false
+  }
+}

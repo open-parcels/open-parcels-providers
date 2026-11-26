@@ -1,0 +1,24 @@
+{
+  "schema": 1,
+  "id": "an_post",
+  "name": "An Post",
+  "countries": ["IE"],
+  "aliases": ["Irish Post"],
+  "provides": {
+    "connections": ["account"],
+    "live": false,
+    "fallback": false
+  },
+  "permissions": {
+    "network": [
+      {
+        "host": ".anpost.com",
+        "reason": "Sign-in and parcel data."
+      }
+    ],
+    "image_hosts": [],
+    "secrets": ["credentials"],
+    "session": true,
+    "user_agent": false
+  }
+}

@@ -1,0 +1,31 @@
+{
+  "schema": 1,
+  "id": "mondial_relay",
+  "name": "Mondial Relay",
+  "countries": ["FR", "BE", "NL", "ES", "PT", "LU"],
+  "provides": {
+    "connections": ["account", "tracking"],
+    "live": false,
+    "fallback": false
+  },
+  "permissions": {
+    "network": [
+      {
+        "host": ".mondialrelay.app",
+        "reason": "Tracking and account data."
+      },
+      {
+        "host": ".mondialrelay.be",
+        "reason": "Tracking and account data."
+      },
+      {
+        "host": "account.inpost-group.com",
+        "reason": "Sign-in."
+      }
+    ],
+    "image_hosts": [],
+    "secrets": ["token"],
+    "session": true,
+    "user_agent": true
+  }
+}

@@ -1,0 +1,23 @@
+{
+  "schema": 1,
+  "id": "gofo",
+  "name": "GOFO Express",
+  "countries": ["US", "CA", "IT", "FR", "ES", "NL"],
+  "provides": {
+    "connections": ["tracking"],
+    "live": false,
+    "fallback": false
+  },
+  "permissions": {
+    "network": [
+      {
+        "host": ".gofo.com",
+        "reason": "Tracking data."
+      }
+    ],
+    "image_hosts": [],
+    "secrets": [],
+    "session": false,
+    "user_agent": false
+  }
+}
