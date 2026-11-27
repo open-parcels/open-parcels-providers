@@ -22,10 +22,18 @@ export interface TileSpec {
 /** The parts of an orders page around its lines: the time filter's years and paging links. */
 export interface ListingSpec {
   readonly years?: readonly number[];
-  /** `startIndex` of the next page's link, when there is a next page. */
+  /** The year the page lists, carried by its paging links; none for the default listing. */
+  readonly year?: number;
+  /** 0-based `page` of the next page's link, when there is a next page. */
   readonly next?: number;
-  /** `startIndex` of the previous page's link. */
+  /** 0-based `page` of the previous page's link. */
   readonly previous?: number;
+}
+
+/** A paging link as the desktop page writes it: under a language prefix, `page` 0-based. */
+export function pagingHref(year: number | undefined, page: number): string {
+  const filter = year === undefined ? "" : `timeFilter=year-${String(year)}&amp;`;
+  return `/-/en/your-orders/orders?${filter}page=${String(page)}&amp;ref_=ppx_yo2ov_dt_b_pagination`;
 }
 
 const attr = (text: string): string =>
@@ -58,21 +66,32 @@ export function ordersPage(tiles: readonly TileSpec[], listing: ListingSpec = {}
         `</div>`,
     )
     .join("\n");
+  // The nav bar's search box comes first, a select of its own; it lists no years.
+  const search =
+    `<select id="searchDropdownBox" name="url"><option value="search-alias=aps">All</option>` +
+    `<option value="search-alias=year-2001">Made-up department</option></select>`;
   const filter =
     listing.years === undefined
       ? ""
-      : `<select name="timeFilter" id="time-filter"><option value="last30">past 30 days</option>` +
-        `<option value="months-3">past 3 months</option>` +
+      : `<form class="js-time-filter-form" method="get" action="/your-orders/orders">` +
+        `<input type="hidden" name="ref_" value="ppx_yo2ov_dt_b_filter_all">` +
+        `<select name="timeFilter" autocomplete="off" id="time-filter" class="a-native-dropdown">` +
+        `<option value="last30">past 30 days</option>` +
+        `<option value="months-3" selected>past three months</option>` +
         listing.years
           .map((year) => `<option value="year-${String(year)}">${String(year)}</option>`)
           .join("") +
-        `<option value="archived">Archived orders</option></select>`;
-  const link = (index: number | undefined, label: string): string =>
-    index === undefined
+        `</select></form>`;
+  const previous =
+    listing.previous === undefined
       ? ""
-      : `<li class="a-${label}"><a href="/your-orders/orders?timeFilter=year-2000&amp;startIndex=${String(index)}">${label}</a></li>`;
-  const paging = `<ul class="a-pagination">${link(listing.previous, "normal")}${link(listing.next, "last")}</ul>`;
-  return `<html><body><h1>Your Orders</h1>${filter}${cards}${paging}</body></html>`;
+      : `<li class="a-normal"><a href="${pagingHref(listing.year, listing.previous)}">Previous</a></li>`;
+  const next =
+    listing.next === undefined
+      ? `<li class="a-disabled a-last">Next</li>`
+      : `<li class="a-last"><a href="${pagingHref(listing.year, listing.next)}">Next</a></li>`;
+  const paging = `<ul class="a-pagination">${previous}${next}</ul>`;
+  return `<html><body>${search}<h1>Your Orders</h1>${filter}${cards}${paging}</body></html>`;
 }
 
 export function trackPath(orderId: string, shipmentId: string): string {

@@ -199,47 +199,62 @@ export function parseOrderTiles(page: string, isStatus: (text: string) => boolea
   return tiles;
 }
 
-/** A link to a later page of the order history: a `startIndex` past 0, or an enabled "next". */
-const NEXT_PAGE_RE = /href="[^"]*[?&](?:amp;)?startIndex=(?!0["&])\d+|<li class="a-last">\s*<a\s/i;
+/**
+ * The pagination's "next" item while it still links somewhere: `<li class="a-last"><a href=…>`.
+ * On the last page the item is `a-last a-disabled` without a link.
+ */
+const NEXT_LINK_RE = /<li\s+class="a-last"\s*>\s*<a\b[^>]*\bhref="([^"]+)"/i;
+/** The time filter itself: `<select id="time-filter" name="timeFilter">`, not the search box's. */
+const TIME_FILTER_RE = /<select\b[^>]*\bname="timeFilter"[^>]*>([\s\S]*?)<\/select>/gi;
+/** A year among the time filter's options, by value: `<option value="year-2023">`. */
+const YEAR_OPTION_RE = /<option\b[^>]*\bvalue="year-(\d{4})"/g;
+/** A link to one year of the orders page: `?timeFilter=year-2023`. */
+const YEAR_LINK_RE = /href="[^"]*[?&](?:amp;)?timeFilter=year-(\d{4})\b/g;
+/** The orders page, also under a language prefix such as `/-/en`. */
+const ORDERS_PAGE_PATH_RE = /^(?:\/-\/[a-z]{2})?\/your-orders\/orders$/;
+
+const unescapeHref = (href: string): string => href.replaceAll("&amp;", "&");
 
 /**
- * Whether the orders page says older orders follow on another page. Only the first page is read,
- * so a parcel from an older order would be missing without being gone.
+ * The path and query of the listing's next page as its "next" link names them (the desktop page
+ * pages with `page=<n>`, 0-based, under a language prefix), or null on its last page. A link that
+ * leaves the orders page counts as none.
  */
-export function hasMoreOrderPages(page: string): boolean {
-  return NEXT_PAGE_RE.test(page);
+export function nextOrdersPage(page: string): string | null {
+  const href = NEXT_LINK_RE.exec(page)?.[1];
+  if (href === undefined) return null;
+  try {
+    const url = new URL(unescapeHref(href), "https://www.example.invalid/");
+    return ORDERS_PAGE_PATH_RE.test(url.pathname) ? `${url.pathname}${url.search}` : null;
+  } catch {
+    return null;
+  }
 }
 
-/** A year in the orders page's time filter: `<option value="year-2023">`. */
-const YEAR_OPTION_RE = /<option\b[^>]*\bvalue="year-(\d{4})"/g;
-/** A link to another page of the same listing, with its first order's index. */
-const START_INDEX_RE = /href="[^"]*[?&](?:amp;)?startIndex=(\d+)/g;
+/**
+ * Whether the orders page says older orders follow on another page. Only the first pages are
+ * read, so a parcel from an older order would be missing without being gone.
+ */
+export function hasMoreOrderPages(page: string): boolean {
+  return nextOrdersPage(page) !== null;
+}
 
 /**
- * The years the orders page's time filter offers (the years the account has orders in), newest
- * first. Empty when the page has no such filter.
+ * The years the orders page offers (the years the account has orders in), newest first: the
+ * time filter's `year-YYYY` options, read by value since the labels are in the page's language,
+ * and links to `timeFilter=year-YYYY`. Empty when the page has neither.
  */
 export function parseOrderYears(page: string): number[] {
   const years = new Set<number>();
-  for (const match of page.matchAll(YEAR_OPTION_RE)) {
+  for (const filter of page.matchAll(TIME_FILTER_RE)) {
+    for (const match of (filter[1] ?? "").matchAll(YEAR_OPTION_RE)) {
+      years.add(Number(match[1]));
+    }
+  }
+  for (const match of page.matchAll(YEAR_LINK_RE)) {
     years.add(Number(match[1]));
   }
   return [...years].sort((a, b) => b - a);
-}
-
-/**
- * The `startIndex` of the listing's next page after the one at `current`, or null on its last
- * page: the smallest index linked from the page that lies past the current one.
- */
-export function nextStartIndex(page: string, current: number): number | null {
-  let next: number | null = null;
-  for (const match of page.matchAll(START_INDEX_RE)) {
-    const index = Number(match[1]);
-    if (index > current && (next === null || index < next)) {
-      next = index;
-    }
-  }
-  return next;
 }
 
 export function looksSignedOut(page: string, finalUrl: string): boolean {

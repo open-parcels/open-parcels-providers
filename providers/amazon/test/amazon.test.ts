@@ -370,7 +370,7 @@ describe("Amazon account", () => {
       url.pathname === "/your-orders/orders"
         ? html(
             `${ordersPage([OWN_FLEET])}<ul class="a-pagination"><li class="a-last">` +
-              `<a href="/your-orders/orders?startIndex=10">Next</a></li></ul>`,
+              `<a href="/-/en/your-orders/orders?page=1">Next</a></li></ul>`,
           )
         : storefront([OWN_FLEET], PAGES)(url, init);
     const result = await readAccount(harness(paged).context, rules);

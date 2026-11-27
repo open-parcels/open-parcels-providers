@@ -29,8 +29,8 @@ function account(first: string): { context: AmazonContext; calls: () => string[]
   const network = fakeNetwork([
     ({ url }) => {
       if (url.pathname === "/ap/exchangetoken/cookies") return json(cookieExchange("amazon.de"));
-      if (url.pathname === "/your-orders/orders") {
-        return html(url.searchParams.has("startIndex") ? EMPTY_PAGE : first);
+      if (url.pathname.endsWith("/your-orders/orders")) {
+        return html(url.searchParams.has("page") ? EMPTY_PAGE : first);
       }
       if (url.pathname === "/gp/your-account/ship-track") {
         const shipment = url.searchParams.get("shipmentId") ?? "";
@@ -150,9 +150,9 @@ describe("Amazon polling run over order cards", () => {
     expect(byOrder.get("900-0000000-0000103")?.order?.returnUntil).toBe("2026-11-04");
     expect(byOrder.has("900-0000000-0000104")).toBe(false);
     // The second page is read; nothing behind it is.
-    expect(calls().filter((call) => call.startsWith("/your-orders/orders"))).toEqual([
+    expect(calls().filter((call) => call.includes("/your-orders/orders"))).toEqual([
       "/your-orders/orders",
-      "/your-orders/orders?startIndex=10",
+      "/-/en/your-orders/orders?page=1&ref_=ppx_yo2ov_dt_b_pagination",
     ]);
     expect(result.complete).toBe(true);
   });

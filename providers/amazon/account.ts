@@ -20,7 +20,7 @@ import {
   isTrackPagePath,
   looksLikeCaptcha,
   looksSignedOut,
-  nextStartIndex,
+  nextOrdersPage,
   parseTrackLink,
   parseTrackPage,
   shipmentKey,
@@ -170,18 +170,16 @@ async function readListing(
     if (page === null) continue;
     const tiles: OrderTile[] = [];
     const orders: OrderHeader[] = [];
-    let start = 0;
     for (let read = 1; ; read += 1) {
       const list = parseOrderList(page.body, isStatus);
       tiles.push(
         ...list.tiles.map((tile) => ({ ...tile, position: tiles.length + tile.position })),
       );
       orders.push(...list.orders);
-      const next = list.orders.length === 0 ? null : nextStartIndex(page.body, start);
+      const next = list.orders.length === 0 ? null : nextOrdersPage(page.body);
       if (next === null) return { list: { tiles, orders }, more: hasMoreOrderPages(page.body) };
       if (read >= ORDER_PAGES) return { list: { tiles, orders }, more: true };
-      start = next;
-      const following = await reader.page(`${path}?startIndex=${String(next)}`);
+      const following = await reader.page(next);
       if (following === null) return { list: { tiles, orders }, more: true };
       page = following;
     }

@@ -2,12 +2,12 @@ import { loadRules } from "open-parcels-rules";
 import { describe, expect, it } from "vitest";
 import type { AmazonConfig } from "../../../src/carriers/amazon/account.js";
 import type { AmazonSecret } from "../../../src/carriers/amazon/auth.js";
-import { OrdersPageChangedError } from "../../../src/carriers/amazon/history.js";
 import { amazonCarrier } from "../../../src/carriers/amazon/index.js";
 import { linkUrl } from "../../../src/provider/manifest.js";
 import { builtinManifest } from "../../manifests.js";
 import {
   CaptchaError,
+  PageChangedError,
   SignInRejectedError,
   type ActionBatch,
   type ActionContext,
@@ -19,6 +19,7 @@ import {
   CAPTCHA_PAGE,
   cookieExchange,
   ordersPage,
+  pagingHref,
   SIGN_IN_PAGE,
   trackPage,
   type ListingSpec,
@@ -36,7 +37,7 @@ const action = plugin.actions?.["import_history"];
 const REFRESH = ["Atnr", "made", "up"].join("|");
 const SERIAL = "0123456789ABCDEF0123456789ABCDEF";
 
-/** One year's pages of order lines, by `startIndex`. */
+/** One year's pages of order lines, by 0-based `page`. */
 type Years = Readonly<Record<number, readonly (readonly TileSpec[])[]>>;
 
 interface Run {
@@ -52,6 +53,8 @@ interface Run {
 
 interface Options {
   readonly years?: Years;
+  /** The years the default page's time filter lists; empty: the page has no time filter. */
+  readonly listed?: readonly number[];
   readonly checkpoint?: unknown;
   readonly input?: unknown;
   /** Answers a page instead of the storefront; undefined falls through to it. */
@@ -99,15 +102,15 @@ const DEFAULT_YEARS: Years = {
   2024: [[IN_2024]],
 };
 
-function listing(years: Years, year: number, startIndex: number): string | undefined {
+function listing(years: Years, year: number, index: number): string | undefined {
   const pages = years[year] ?? [];
-  const index = startIndex / 10;
   // A year the filter lists may have no order lines at all.
   const tiles = pages.length === 0 && index === 0 ? [] : pages[index];
   if (tiles === undefined) return undefined;
   const spec: ListingSpec = {
-    ...(index + 1 < pages.length ? { next: startIndex + 10 } : {}),
-    ...(index > 0 ? { previous: startIndex - 10 } : {}),
+    year,
+    ...(index + 1 < pages.length ? { next: index + 1 } : {}),
+    ...(index > 0 ? { previous: index - 1 } : {}),
   };
   return ordersPage(tiles, spec);
 }
@@ -123,14 +126,13 @@ function run(options: Options = {}): Run {
       pages.push(`${url.pathname}${url.search}`);
       const own = options.override?.({ url, count: pages.length });
       if (own !== undefined) return own;
-      if (url.pathname === "/your-orders/orders") {
+      if (/^(?:\/-\/en)?\/your-orders\/orders$/.test(url.pathname)) {
         const filter = /^year-(\d{4})$/.exec(url.searchParams.get("timeFilter") ?? "");
-        if (filter === null) return html(ordersPage([], { years: YEARS_LISTED }));
-        const page = listing(
-          years,
-          Number(filter[1]),
-          Number(url.searchParams.get("startIndex") ?? 0),
-        );
+        if (filter === null) {
+          const listed = options.listed ?? YEARS_LISTED;
+          return html(ordersPage([], listed.length === 0 ? {} : { years: listed }));
+        }
+        const page = listing(years, Number(filter[1]), Number(url.searchParams.get("page") ?? 0));
         return page === undefined ? html("", 404) : html(page);
       }
       if (url.pathname === "/progress-tracker/package") {
@@ -199,7 +201,7 @@ describe("Amazon import history", () => {
       "/your-orders/orders",
       "/your-orders/orders?timeFilter=year-2026",
       "/progress-tracker/package?orderId=000-2222222-0000001&shipmentId=SHIPNEW1",
-      "/your-orders/orders?timeFilter=year-2026&startIndex=10",
+      pagingHref(2026, 1).replaceAll("&amp;", "&"),
       "/your-orders/orders?timeFilter=year-2024",
     ]);
     expect(orderNumbers(job.batches)).toEqual([
@@ -244,7 +246,7 @@ describe("Amazon import history", () => {
     expect(await second.result).toEqual({ status: "done", summary: "4 orders, 1 parcels" });
     expect(second.pages).toEqual([
       "/progress-tracker/package?orderId=000-2222222-0000001&shipmentId=SHIPNEW1",
-      "/your-orders/orders?timeFilter=year-2026&startIndex=10",
+      pagingHref(2026, 1).replaceAll("&amp;", "&"),
       "/your-orders/orders?timeFilter=year-2024",
     ]);
     expect(orderNumbers([...first.batches, ...second.batches])).toHaveLength(4);
@@ -266,7 +268,10 @@ describe("Amazon import history", () => {
     expect(job.reports).toContain("page:history_year_without_lines");
     expect(job.pages).toHaveLength(300);
     expect(job.waits.filter((wait) => wait === 120_000)).toHaveLength(11);
-    expect(job.checkpoints.at(-1)).toMatchObject({ year: 1, startIndex: 2980 });
+    expect(job.checkpoints.at(-1)).toMatchObject({
+      year: 1,
+      page: pagingHref(2024, 298).replaceAll("&amp;", "&"),
+    });
   });
 
   it("stops at a cancel during a rest, with nothing more read", async () => {
@@ -290,8 +295,39 @@ describe("Amazon import history", () => {
     const twice = run({
       override: ({ url }) => (url.search === "" ? html("<html>Your Orders</html>") : undefined),
     });
-    await expect(twice.result).rejects.toBeInstanceOf(OrdersPageChangedError);
+    await expect(twice.result).rejects.toBeInstanceOf(PageChangedError);
     expect(twice.pages).toHaveLength(2);
+  });
+
+  it("goes back a year at a time when the page lists no years, until a year has no order", async () => {
+    const job = run({
+      listed: [],
+      years: { 2026: [[RECENT], [CANCELLED]], 2025: [[DELIVERED_IN_MARCH]], 2023: [[IN_2024]] },
+    });
+    expect(await job.result).toEqual({ status: "done", summary: "3 orders, 1 parcels" });
+    expect(job.reports).toContain("page:history_no_year_filter");
+    expect(job.pages.filter((page) => page.includes("timeFilter"))).toEqual([
+      "/your-orders/orders?timeFilter=year-2026",
+      pagingHref(2026, 1).replaceAll("&amp;", "&"),
+      "/your-orders/orders?timeFilter=year-2025",
+      // 2024 shows no order: the job ends there, 2023 is never read.
+      "/your-orders/orders?timeFilter=year-2024",
+    ]);
+    // Going back, the number of years is not known.
+    expect(job.progress[0]).toMatchObject({ total: null, phase: "2026: page 1" });
+  });
+
+  it("goes back past a current year without orders, and not past the oldest asked for", async () => {
+    const job = run({
+      listed: [],
+      years: { 2025: [[DELIVERED_IN_MARCH]], 2024: [[IN_2024]] },
+      input: { since_year: 2025 },
+    });
+    expect(await job.result).toEqual({ status: "done", summary: "1 orders, 0 parcels" });
+    expect(job.pages.filter((page) => page.includes("timeFilter"))).toEqual([
+      "/your-orders/orders?timeFilter=year-2026",
+      "/your-orders/orders?timeFilter=year-2025",
+    ]);
   });
 
   it("hands a captcha and a refused sign-in to the job, never retrying them", async () => {

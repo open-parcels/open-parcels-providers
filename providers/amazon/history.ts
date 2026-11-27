@@ -1,6 +1,7 @@
 import { z } from "zod";
 import {
   defineAction,
+  PageChangedError,
   UnexpectedResponseError,
   type ActionContext,
   type ActionResult,
@@ -20,18 +21,24 @@ import {
 } from "./account.js";
 import type { AmazonSecret } from "./auth.js";
 import { buildSnapshot, readsAsStatus } from "./build.js";
-import { daysSince, placedDay } from "./dates.js";
+import { daysSince, placedDay, today } from "./dates.js";
 import { parseOrderList } from "./order-cards.js";
 import { orderReports } from "./orders.js";
-import { nextStartIndex, parseOrderYears, shipmentKey, type OrderTile } from "./pages.js";
+import { nextOrdersPage, parseOrderYears, shipmentKey, type OrderTile } from "./pages.js";
 import { loadSession, serializeSession, type AmazonSession } from "./session.js";
 import { STOREFRONTS, type Storefront } from "./storefronts.js";
 
 /**
  * "Import history" (decision record 0002 §2.13): every year of the orders page, newest first,
- * page by page. Each page's orders are stored from their order lines alone; only shipments
+ * page by page, each page's "next" link naming the one after it. Each page's orders are stored from their order lines alone; only shipments
  * placed recently and not delivered long ago get their tracking pages read, a few per batch.
  * Paced well below a person browsing, with a checkpoint after every batch.
+ *
+ * The years come from the orders page's time filter. A page without one (Amazon serves the
+ * mobile User-Agent the provider reads with a page that may lack it) is no reason to stop: the
+ * job then reads the current year and goes back a year at a time, until a year shows no order on
+ * its first page. Paging the default listing instead would not reach old orders: it shows only
+ * the past three months.
  */
 
 type AmazonActionContext = ActionContext<AmazonConfig, AmazonSecret | null>;
@@ -50,11 +57,10 @@ const LEG_REST_S = 60 * 60;
 const SHAPE_RETRY_MS = 60_000;
 /** Shipments placed longer ago than this are not followed to their tracking pages. */
 const FOLLOW_DAYS = 90;
-
-/** What an import job's leg cannot continue past: the orders page changed shape. */
-export class OrdersPageChangedError extends Error {
-  override readonly name = "OrdersPageChangedError";
-}
+/** Going back year by year never reads past this one: Amazon opened in 1995. */
+const FIRST_YEAR = 1995;
+/** The orders page's paging list, there even on a listing of one page. */
+const PAGINATION_RE = /<ul\b[^>]*\bclass="a-pagination"/;
 
 /** The job's signal aborted during a rest: the leg ends with what it has. */
 class Stopped extends Error {
@@ -81,7 +87,14 @@ const checkpointSchema = z.object({
   years: z.array(z.number().int()),
   /** Index into `years` of the year being read. */
   year: z.number().int().min(0),
-  startIndex: z.number().int().min(0),
+  /** Path of the current year's next page as its "next" link named it; null: its first page. */
+  page: z.string().nullable(),
+  /**
+   * No time filter listed the years: `years` grows by the year before the last one read while
+   * that one had orders, down to `oldest`.
+   */
+  probing: z.boolean(),
+  oldest: z.number().int(),
   /** Pages of the current year read so far, for the phase text. */
   yearPage: z.number().int().min(0),
   /** Shipments whose tracking pages are still to be read. */
@@ -133,7 +146,7 @@ class PacedReader implements PageReader {
         return read(await this.page(path));
       } catch (error) {
         if (!(error instanceof UnexpectedResponseError)) throw error;
-        if (attempt > 0) throw new OrdersPageChangedError(error.message);
+        if (attempt > 0) throw new PageChangedError(error.message);
         this.context.reportUnknown("page", "history_unexpected_page");
         await this.context.wait(SHAPE_RETRY_MS);
       }
@@ -141,10 +154,8 @@ class PacedReader implements PageReader {
   }
 }
 
-function yearPath(year: number, startIndex: number): string {
-  const query = new URLSearchParams({ timeFilter: `year-${String(year)}` });
-  if (startIndex > 0) query.set("startIndex", String(startIndex));
-  return `${ORDERS_PATH}?${query.toString()}`;
+function yearPath(year: number): string {
+  return `${ORDERS_PATH}?${new URLSearchParams({ timeFilter: `year-${String(year)}` }).toString()}`;
 }
 
 /** Whether a shipment is worth its tracking page: placed recently, not delivered long ago. */
@@ -178,19 +189,32 @@ class HistoryImport {
     return `${String(state.orders)} orders, ${String(state.parcels)} parcels`;
   }
 
-  /** Reads the years the account has orders in. */
+  /** Reads the years the account has orders in, or plans to go back from the current one. */
   async plan(sinceYear: number | undefined): Promise<Checkpoint> {
-    const years = await this.#paced.ordersPage(ORDERS_PATH, (page) => {
-      const listed = page === null ? [] : parseOrderYears(page.body);
-      if (listed.length === 0) {
-        throw new UnexpectedResponseError("Amazon's orders page lists no years.");
+    const listed = await this.#paced.ordersPage(ORDERS_PATH, (page) => {
+      if (page === null) {
+        throw new UnexpectedResponseError("Amazon's orders page was not found.");
       }
-      return listed;
+      const years = parseOrderYears(page.body);
+      // Without a time filter it must still read as the orders page: orders or paging.
+      const read = parseOrderList(page.body, (text) => readsAsStatus(this.rules, text));
+      if (years.length === 0 && read.orders.length === 0 && !PAGINATION_RE.test(page.body)) {
+        throw new UnexpectedResponseError("Amazon's orders page lists neither years nor orders.");
+      }
+      return years;
     });
+    const oldest = Math.max(FIRST_YEAR, sinceYear ?? FIRST_YEAR);
+    const probing = listed.length === 0;
+    if (probing) {
+      this.context.reportUnknown("page", "history_no_year_filter");
+    }
+    const current = today(this.context.clock.now(), this.#storefront.timeZone).year;
     return {
-      years: years.filter((year) => sinceYear === undefined || year >= sinceYear),
+      years: (probing ? [current] : listed).filter((year) => year >= oldest),
       year: 0,
-      startIndex: 0,
+      page: null,
+      probing,
+      oldest,
       yearPage: 0,
       pending: [],
       orders: 0,
@@ -231,21 +255,19 @@ class HistoryImport {
   async readPage(state: Checkpoint): Promise<Checkpoint> {
     const year = state.years[state.year];
     if (year === undefined) return state;
-    const { list, next } = await this.#paced.ordersPage(
-      yearPath(year, state.startIndex),
-      (page) => {
-        if (page === null) {
-          throw new UnexpectedResponseError("Amazon's orders page for a year was not found.");
-        }
-        const read = parseOrderList(page.body, (text) => readsAsStatus(this.rules, text));
-        return {
-          list: read,
-          next: read.orders.length === 0 ? null : nextStartIndex(page.body, state.startIndex),
-        };
-      },
-    );
+    const { list, next } = await this.#paced.ordersPage(state.page ?? yearPath(year), (page) => {
+      if (page === null) {
+        throw new UnexpectedResponseError("Amazon's orders page for a year was not found.");
+      }
+      const read = parseOrderList(page.body, (text) => readsAsStatus(this.rules, text));
+      return {
+        list: read,
+        next: read.orders.length === 0 ? null : nextOrdersPage(page.body),
+      };
+    });
     const tiles = list.tiles;
-    if (list.orders.length === 0 && state.startIndex === 0) {
+    const emptyYear = list.orders.length === 0 && state.page === null;
+    if (emptyYear && !state.probing) {
       // A year the filter offers without physical orders (digital ones are listed elsewhere).
       this.context.reportUnknown("page", "history_year_without_lines");
     }
@@ -260,11 +282,26 @@ class HistoryImport {
     return {
       ...state,
       ...(next === null
-        ? { year: state.year + 1, startIndex: 0, yearPage: 0 }
-        : { startIndex: next, yearPage: state.yearPage + 1 }),
+        ? {
+            years: this.yearsAfter(state, year, emptyYear),
+            year: state.year + 1,
+            page: null,
+            yearPage: 0,
+          }
+        : { page: next, yearPage: state.yearPage + 1 }),
       pending: [...state.pending, ...follow.filter((group) => !known.has(keyOf(group)))],
       orders: state.orders + orders.length,
     };
+  }
+
+  /**
+   * The planned years once `year` is read. Going back year by year, the year before it is added
+   * unless `year` had no order (the current year may have none yet) or is the oldest asked for.
+   */
+  yearsAfter(state: Checkpoint, year: number, empty: boolean): number[] {
+    const previous = year - 1;
+    const goOn = state.probing && (!empty || state.year === 0) && previous >= state.oldest;
+    return goOn ? [...state.years, previous] : state.years;
   }
 
   async save(state: Checkpoint): Promise<void> {
@@ -276,7 +313,7 @@ class HistoryImport {
     const year = state.years[state.year];
     this.context.progress({
       done: state.year,
-      total: state.years.length,
+      total: state.probing ? null : state.years.length,
       phase:
         year === undefined
           ? "Tracking pages"
